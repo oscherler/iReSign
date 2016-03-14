@@ -30,6 +30,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[flurry setAlphaValue: 0.5];
 	
 	defaults = [NSUserDefaults standardUserDefaults];
+	fileManager = [NSFileManager defaultManager];
 	
 	// Look up available signing certificates
 	[self getCerts];
@@ -39,17 +40,17 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	if( [defaults valueForKey: @"MOBILEPROVISION_PATH"] )
 		[provisioningPathField setStringValue: [defaults valueForKey: @"MOBILEPROVISION_PATH"]];
 	
-	if( ! [[NSFileManager defaultManager] fileExistsAtPath: @"/usr/bin/zip"] )
+	if( ! [fileManager fileExistsAtPath: @"/usr/bin/zip"] )
 	{
 		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"This app cannot run without the zip utility present at /usr/bin/zip"];
 		exit( 0 );
 	}
-	if( ! [[NSFileManager defaultManager] fileExistsAtPath: @"/usr/bin/unzip"] )
+	if( ! [fileManager fileExistsAtPath: @"/usr/bin/unzip"] )
 	{
 		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"This app cannot run without the unzip utility present at /usr/bin/unzip"];
 		exit( 0 );
 	}
-	if( ! [[NSFileManager defaultManager] fileExistsAtPath: @"/usr/bin/codesign"] )
+	if( ! [fileManager fileExistsAtPath: @"/usr/bin/codesign"] )
 	{
 		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"This app cannot run without the codesign utility present at /usr/bin/codesign"];
 		exit( 0 );
@@ -84,9 +85,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 			[statusLabel setHidden: NO];
 			[statusLabel setStringValue: @"Setting up working directory"];
 			
-			[[NSFileManager defaultManager] removeItemAtPath: workingPath error: nil];
+			[fileManager removeItemAtPath: workingPath error: nil];
 			
-			[[NSFileManager defaultManager] createDirectoryAtPath: workingPath withIntermediateDirectories: TRUE attributes: nil error: nil];
+			[fileManager createDirectoryAtPath: workingPath withIntermediateDirectories: TRUE attributes: nil error: nil];
 			
 			if( [[[sourcePath pathExtension] lowercaseString] isEqualToString: @"ipa"] )
 			{
@@ -111,7 +112,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 				NSLog( @"Setting up %@ path in %@", kPayloadDirName, payloadPath );
 				[statusLabel setStringValue: [NSString stringWithFormat: @"Setting up %@ path", kPayloadDirName]];
 				
-				[[NSFileManager defaultManager] createDirectoryAtPath: payloadPath withIntermediateDirectories: TRUE attributes: nil error: nil];
+				[fileManager createDirectoryAtPath: payloadPath withIntermediateDirectories: TRUE attributes: nil error: nil];
 				
 				NSLog( @"Retrieving %@", kInfoPlistFilename );
 				[statusLabel setStringValue: [NSString stringWithFormat: @"Retrieving %@", kInfoPlistFilename]];
@@ -183,7 +184,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		[timer invalidate];
 		unzipTask = nil;
 		
-		if( [[NSFileManager defaultManager] fileExistsAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName]] )
+		if( [fileManager fileExistsAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName]] )
 		{
 			NSLog(@"Unzipping done");
 			[statusLabel setStringValue: @"Original app extracted"];
@@ -249,7 +250,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (BOOL) doITunesMetadataBundleIDChange: (NSString *) newBundleID
 {
-	NSArray *dirContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath: workingPath error: nil];
+	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: workingPath error: nil];
 	NSString *infoPlistPath = nil;
 	
 	for( NSString *file in dirContents )
@@ -267,7 +268,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (BOOL) doAppBundleIDChange: (NSString *) newBundleID
 {
-	NSArray *dirContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
+	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
 	NSString *infoPlistPath = nil;
 	
 	for( NSString *file in dirContents )
@@ -289,7 +290,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 {
 	NSMutableDictionary *plist = nil;
 	
-	if( [[NSFileManager defaultManager] fileExistsAtPath: filePath] )
+	if( [fileManager fileExistsAtPath: filePath] )
 	{
 		plist = [[NSMutableDictionary alloc] initWithContentsOfFile: filePath];
 		[plist setObject: newBundleID forKey: bundleIDKey];
@@ -304,17 +305,17 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) doProvisioning
 {
-	NSArray *dirContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
+	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
 	
 	for( NSString *file in dirContents )
 	{
 		if( [[[file pathExtension] lowercaseString] isEqualToString: @"app"] )
 		{
 			appPath = [[workingPath stringByAppendingPathComponent: kPayloadDirName] stringByAppendingPathComponent: file];
-			if( [[NSFileManager defaultManager] fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
+			if( [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
 			{
 				NSLog(@"Found embedded.mobileprovision, deleting.");
-				[[NSFileManager defaultManager] removeItemAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"] error: nil];
+				[fileManager removeItemAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"] error: nil];
 			}
 			break;
 		}
@@ -338,14 +339,14 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		[timer invalidate];
 		provisioningTask = nil;
 		
-		NSArray *dirContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
+		NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
 		
 		for( NSString *file in dirContents )
 		{
 			if( [[[file pathExtension] lowercaseString] isEqualToString: @"app"] )
 			{
 				appPath = [[workingPath stringByAppendingPathComponent: kPayloadDirName] stringByAppendingPathComponent: file];
-				if( [[NSFileManager defaultManager] fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
+				if( [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
 				{
 					
 					BOOL identifierOK = FALSE;
@@ -504,7 +505,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	hasFrameworks = NO;
 	frameworks = [[NSMutableArray alloc] init];
 	
-	NSArray *dirContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
+	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
 	
 	for( NSString *file in dirContents )
 	{
@@ -514,11 +515,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 			frameworksDirPath = [appPath stringByAppendingPathComponent: kFrameworksDirName];
 			NSLog( @"Found %@", appPath );
 			appName = file;
-			if( [[NSFileManager defaultManager] fileExistsAtPath: frameworksDirPath] )
+			if( [fileManager fileExistsAtPath: frameworksDirPath] )
 			{
 				NSLog( @"Found %@", frameworksDirPath );
 				hasFrameworks = YES;
-				NSArray *frameworksContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath: frameworksDirPath error: nil];
+				NSArray *frameworksContents = [fileManager contentsOfDirectoryAtPath: frameworksDirPath error: nil];
 				for( NSString *frameworkFile in frameworksContents )
 				{
 					NSString *extension = [[frameworkFile pathExtension] lowercaseString];
@@ -743,7 +744,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		NSLog(@"Zipping done");
 		[statusLabel setStringValue: [NSString stringWithFormat: @"Saved %@", fileName]];
 		
-		[[NSFileManager defaultManager] removeItemAtPath: workingPath error: nil];
+		[fileManager removeItemAtPath: workingPath error: nil];
 		
 		[self enableControls];
 		

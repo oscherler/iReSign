@@ -16,6 +16,7 @@
 	NSWindow *__unsafe_unretained window;
 	
 	NSUserDefaults *defaults;
+	NSFileManager *fileManager;
 	
 	NSTask *unzipTask;
 	NSTask *copyTask;
