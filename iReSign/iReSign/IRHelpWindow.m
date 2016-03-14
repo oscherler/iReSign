@@ -11,12 +11,14 @@
 @implementation IRHelpWindow
 
 // Move the window by dragging
-- (BOOL)isMovableByWindowBackground {
+- (BOOL) isMovableByWindowBackground
+{
 	return YES;
 }
 
 // Close the window
-- (IBAction)closeOK:(id)sender {
+- (IBAction) closeOK: (id) sender
+{
 	[self close];
 }
 

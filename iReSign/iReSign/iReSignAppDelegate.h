@@ -10,8 +10,9 @@
 #import <Cocoa/Cocoa.h>
 #import "IRTextFieldDrag.h"
 
-@interface iReSignAppDelegate : NSObject <NSApplicationDelegate> {
-@private
+@interface iReSignAppDelegate : NSObject <NSApplicationDelegate>
+{
+	@private
 	NSWindow *__unsafe_unretained window;
 	
 	NSUserDefaults *defaults;
@@ -54,30 +55,29 @@
 	NSMutableArray *certComboBoxItems;
 	NSTask *certTask;
 	NSArray *getCertsResult;
-	
 }
 
 @property (unsafe_unretained) IBOutlet NSWindow *window;
 
 @property (nonatomic, strong) NSString *workingPath;
 
-- (IBAction)resign:(id)sender;
-- (IBAction)browse:(id)sender;
-- (IBAction)provisioningBrowse:(id)sender;
-- (IBAction)entitlementBrowse:(id)sender;
-- (IBAction)changeBundleIDPressed:(id)sender;
+- (IBAction) resign: (id) sender;
+- (IBAction) browse: (id) sender;
+- (IBAction) provisioningBrowse: (id) sender;
+- (IBAction) entitlementBrowse: (id) sender;
+- (IBAction) changeBundleIDPressed: (id) sender;
 
-- (void)checkUnzip:(NSTimer *)timer;
-- (void)checkCopy:(NSTimer *)timer;
-- (void)doProvisioning;
-- (void)checkProvisioning:(NSTimer *)timer;
-- (void)doCodeSigning;
-- (void)checkCodesigning:(NSTimer *)timer;
-- (void)doVerifySignature;
-- (void)checkVerificationProcess:(NSTimer *)timer;
-- (void)doZip;
-- (void)checkZip:(NSTimer *)timer;
-- (void)disableControls;
-- (void)enableControls;
+- (void) checkUnzip: (NSTimer *) timer;
+- (void) checkCopy: (NSTimer *) timer;
+- (void) doProvisioning;
+- (void) checkProvisioning: (NSTimer *) timer;
+- (void) doCodeSigning;
+- (void) checkCodesigning: (NSTimer *) timer;
+- (void) doVerifySignature;
+- (void) checkVerificationProcess: (NSTimer *) timer;
+- (void) doZip;
+- (void) checkZip: (NSTimer *) timer;
+- (void) disableControls;
+- (void) enableControls;
 
 @end

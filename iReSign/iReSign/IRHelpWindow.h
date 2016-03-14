@@ -11,6 +11,6 @@
 @interface IRHelpWindow : NSWindow
 
 // Close the window
-- (IBAction)closeOK:(id)sender;
+- (IBAction) closeOK: (id) sender;
 
 @end
