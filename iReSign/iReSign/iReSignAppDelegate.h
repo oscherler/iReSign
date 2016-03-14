@@ -12,49 +12,49 @@
 
 @interface iReSignAppDelegate : NSObject <NSApplicationDelegate> {
 @private
-    NSWindow *__unsafe_unretained window;
-    
-    NSUserDefaults *defaults;
-    
-    NSTask *unzipTask;
-    NSTask *copyTask;
-    NSTask *provisioningTask;
-    NSTask *codesignTask;
-    NSTask *generateEntitlementsTask;
-    NSTask *verifyTask;
-    NSTask *zipTask;
-    NSString *sourcePath;
-    NSString *appPath;
-    NSString *frameworksDirPath;
-    NSString *frameworkPath;
-    NSString *workingPath;
-    NSString *appName;
-    NSString *fileName;
-    
-    NSString *entitlementsResult;
-    NSString *codesigningResult;
-    NSString *verificationResult;
-    
-    NSMutableArray *frameworks;
-    Boolean hasFrameworks;
-    
-    IBOutlet IRTextFieldDrag *pathField;
-    IBOutlet IRTextFieldDrag *provisioningPathField;
-    IBOutlet IRTextFieldDrag *entitlementField;
-    IBOutlet IRTextFieldDrag *bundleIDField;
-    IBOutlet NSButton    *browseButton;
-    IBOutlet NSButton    *provisioningBrowseButton;
-    IBOutlet NSButton *entitlementBrowseButton;
-    IBOutlet NSButton    *resignButton;
-    IBOutlet NSTextField *statusLabel;
-    IBOutlet NSProgressIndicator *flurry;
-    IBOutlet NSButton *changeBundleIDCheckbox;
-    
-    IBOutlet NSComboBox *certComboBox;
-    NSMutableArray *certComboBoxItems;
-    NSTask *certTask;
-    NSArray *getCertsResult;
-    
+	NSWindow *__unsafe_unretained window;
+	
+	NSUserDefaults *defaults;
+	
+	NSTask *unzipTask;
+	NSTask *copyTask;
+	NSTask *provisioningTask;
+	NSTask *codesignTask;
+	NSTask *generateEntitlementsTask;
+	NSTask *verifyTask;
+	NSTask *zipTask;
+	NSString *sourcePath;
+	NSString *appPath;
+	NSString *frameworksDirPath;
+	NSString *frameworkPath;
+	NSString *workingPath;
+	NSString *appName;
+	NSString *fileName;
+	
+	NSString *entitlementsResult;
+	NSString *codesigningResult;
+	NSString *verificationResult;
+	
+	NSMutableArray *frameworks;
+	Boolean hasFrameworks;
+	
+	IBOutlet IRTextFieldDrag *pathField;
+	IBOutlet IRTextFieldDrag *provisioningPathField;
+	IBOutlet IRTextFieldDrag *entitlementField;
+	IBOutlet IRTextFieldDrag *bundleIDField;
+	IBOutlet NSButton *browseButton;
+	IBOutlet NSButton *provisioningBrowseButton;
+	IBOutlet NSButton *entitlementBrowseButton;
+	IBOutlet NSButton *resignButton;
+	IBOutlet NSTextField *statusLabel;
+	IBOutlet NSProgressIndicator *flurry;
+	IBOutlet NSButton *changeBundleIDCheckbox;
+	
+	IBOutlet NSComboBox *certComboBox;
+	NSMutableArray *certComboBoxItems;
+	NSTask *certTask;
+	NSArray *getCertsResult;
+	
 }
 
 @property (unsafe_unretained) IBOutlet NSWindow *window;

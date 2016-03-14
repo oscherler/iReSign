@@ -12,12 +12,12 @@
 
 // Move the window by dragging
 - (BOOL)isMovableByWindowBackground {
-    return YES;
+	return YES;
 }
 
 // Close the window
 - (IBAction)closeOK:(id)sender {
-    [self close];
+	[self close];
 }
 
 @end
