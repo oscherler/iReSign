@@ -830,15 +830,58 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	NSLog(@"Get Certs done");
 	[statusLabel setStringValue: @"Signing Certificate IDs extracted"];
 	
-	if( [defaults valueForKey: @"CERT_INDEX"] )
+	long certIndex = -1;
+	NSArray *args = [[NSProcessInfo processInfo] arguments];
+	if( args.count == 2 )
 	{
-		NSInteger selectedIndex = [[defaults valueForKey: @"CERT_INDEX"] integerValue];
-		if( selectedIndex != -1 )
+		NSDictionary *params = [NSDictionary dictionaryWithContentsOfFile: [args objectAtIndex: 1]];
+		NSLog( @"%@", params );
+		
+		NSString *ipaPath = [params objectForKey: @"ipa-path"];
+		NSString *mobileProvisionPath = [params objectForKey: @"mobile-provision-path"];
+		NSString *entitlementsPath = [params objectForKey: @"entitlements-path"];
+		NSString *bundleID = [params objectForKey: @"bundle-id"];
+		NSString *certificateIdentity = [params objectForKey: @"certificate-identity"];
+		
+		if( mobileProvisionPath != nil )
+			provisioningPathField.stringValue = mobileProvisionPath;
+		
+		if( entitlementsPath != nil )
+			entitlementField.stringValue = entitlementsPath;
+		
+		if( bundleID != nil )
 		{
-			NSString *selectedItem = [self comboBox: certComboBox objectValueForItemAtIndex: selectedIndex];
-			[certComboBox setObjectValue: selectedItem];
-			[certComboBox selectItemAtIndex: selectedIndex];
+			bundleIDField.stringValue = bundleID;
+			changeBundleIDCheckbox.state = NSOnState;
 		}
+		else
+		{
+			bundleIDField.stringValue = @"";
+			changeBundleIDCheckbox.state = NSOffState;
+		}
+		
+		if( certificateIdentity != nil )
+		{
+			certIndex = (long) [certComboBoxItems indexOfObject: certificateIdentity];
+		}
+
+		if( ipaPath != nil )
+		{
+			pathField.stringValue = ipaPath;
+			[self resign: self];
+		}
+	}
+	else
+	{
+		if( [defaults valueForKey: @"CERT_INDEX"] )
+			certIndex = (long) [defaults valueForKey: @"CERT_INDEX"];
+	}
+
+	if( certIndex >= 0 )
+	{
+		NSString *selectedItem = [self comboBox: certComboBox objectValueForItemAtIndex: certIndex];
+		[certComboBox setObjectValue: selectedItem];
+		[certComboBox selectItemAtIndex: certIndex];
 		
 		[self enableControls];
 	}
