@@ -241,17 +241,13 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	}
 }
 
-- (BOOL) doBundleIDChange: (NSString *) newBundleID
+- (void) doBundleIDChange: (NSString *) newBundleID
 {
-	BOOL success = YES;
-	
-	success &= [self doAppBundleIDChange: newBundleID];
-	success &= [self doITunesMetadataBundleIDChange: newBundleID];
-	
-	return success;
+	[self doAppBundleIDChange: newBundleID];
+	[self doITunesMetadataBundleIDChange: newBundleID];
 }
 
-- (BOOL) doITunesMetadataBundleIDChange: (NSString *) newBundleID
+- (void) doITunesMetadataBundleIDChange: (NSString *) newBundleID
 {
 	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: workingPath error: nil];
 	NSString *infoPlistPath = nil;
@@ -265,21 +261,21 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		}
 	}
 	
-	return [self changeBundleIDForFile: infoPlistPath bundleIDKey: kKeyBundleIDPlistiTunesArtwork newBundleID: newBundleID plistOutOptions: NSPropertyListXMLFormat_v1_0];
+	[self changeBundleIDForFile: infoPlistPath bundleIDKey: kKeyBundleIDPlistiTunesArtwork newBundleID: newBundleID plistOutOptions: NSPropertyListXMLFormat_v1_0];
 	
 }
 
-- (BOOL) doAppBundleIDChange: (NSString *) newBundleID
+- (void) doAppBundleIDChange: (NSString *) newBundleID
 {
 	NSString *infoPlistPath = infoPlistPath = [appPath stringByAppendingPathComponent: kInfoPlistFilename];
 	
-	return [self changeBundleIDForFile: infoPlistPath bundleIDKey: kKeyBundleIDPlistApp newBundleID: newBundleID plistOutOptions: NSPropertyListBinaryFormat_v1_0];
+	[self changeBundleIDForFile: infoPlistPath bundleIDKey: kKeyBundleIDPlistApp newBundleID: newBundleID plistOutOptions: NSPropertyListBinaryFormat_v1_0];
 }
 
-- (BOOL) changeBundleIDForFile: (NSString *) filePath bundleIDKey: (NSString *) bundleIDKey newBundleID: (NSString *) newBundleID plistOutOptions: (NSPropertyListWriteOptions) options
+- (void) changeBundleIDForFile: (NSString *) filePath bundleIDKey: (NSString *) bundleIDKey newBundleID: (NSString *) newBundleID plistOutOptions: (NSPropertyListWriteOptions) options
 {
 	if( ! [fileManager fileExistsAtPath: filePath] )
-		return NO;
+		return;
 
 	NSMutableDictionary *plist = nil;
 	
@@ -288,7 +284,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	NSData *xmlData = [NSPropertyListSerialization dataWithPropertyList: plist format: options options: kCFPropertyListImmutable error: nil];
 	
-	return [xmlData writeToFile: filePath atomically: YES];
+	[xmlData writeToFile: filePath atomically: YES];
 }
 
 - (void) doProvisioning

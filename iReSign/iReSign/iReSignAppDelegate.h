@@ -62,10 +62,10 @@
 - (void) checkUnzip: (NSNotification *) notification;
 - (void) checkCopy: (NSNotification *) notification;
 
-- (BOOL) doBundleIDChange: (NSString *) newBundleID;
-- (BOOL) doITunesMetadataBundleIDChange: (NSString *) newBundleID;
-- (BOOL) doAppBundleIDChange: (NSString *) newBundleID;
-- (BOOL) changeBundleIDForFile: (NSString *) filePath bundleIDKey: (NSString *) bundleIDKey newBundleID: (NSString *) newBundleID plistOutOptions: (NSPropertyListWriteOptions) options;
+- (void) doBundleIDChange: (NSString *) newBundleID;
+- (void) doITunesMetadataBundleIDChange: (NSString *) newBundleID;
+- (void) doAppBundleIDChange: (NSString *) newBundleID;
+- (void) changeBundleIDForFile: (NSString *) filePath bundleIDKey: (NSString *) bundleIDKey newBundleID: (NSString *) newBundleID plistOutOptions: (NSPropertyListWriteOptions) options;
 
 - (void) doProvisioning;
 - (void) checkProvisioning: (NSNotification *) notification;
