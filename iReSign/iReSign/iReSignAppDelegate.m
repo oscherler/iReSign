@@ -413,20 +413,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 	if( ! appPath )
 		return;
-
-	NSTask *generateEntitlementsTask = [[NSTask alloc] init];
-	[generateEntitlementsTask setLaunchPath: @"/usr/bin/security"];
-	[generateEntitlementsTask setArguments: @[@"cms", @"-D", @"-i", provisioningPathField.stringValue]];
-	[generateEntitlementsTask setCurrentDirectoryPath: workingPath];
-
-	NSPipe *pipe = [NSPipe pipe];
-	[generateEntitlementsTask setStandardOutput: pipe];
-	[generateEntitlementsTask setStandardError: pipe];
-
-	[notificationCenter addObserver: self selector: @selector( checkEntitlementsFix: ) name:NSFileHandleReadToEndOfFileCompletionNotification object: [pipe fileHandleForReading]];
-    [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
-
-	[generateEntitlementsTask launch];
+	
+	[self executeCommand:@"/usr/bin/security"
+		withArgs:@[ @"cms", @"-D", @"-i", provisioningPathField.stringValue ]
+		onCompleteReadingOutput: @selector( checkEntitlementsFix: )
+	];
 }
 
 - (void) watchEntitlements: (NSNotification *) notification
@@ -560,18 +551,10 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	[arguments addObjectsFromArray: [NSArray arrayWithObjects: filePath, nil]];
 	
-	NSTask *codesignTask = [[NSTask alloc] init];
-	[codesignTask setLaunchPath: @"/usr/bin/codesign"];
-	[codesignTask setArguments: arguments];
-	
-	NSPipe *pipe = [NSPipe pipe];
-	[codesignTask setStandardOutput: pipe];
-	[codesignTask setStandardError: pipe];
-
-	[notificationCenter addObserver: self selector: @selector( checkCodesigning: ) name:NSFileHandleReadToEndOfFileCompletionNotification object: [pipe fileHandleForReading]];
-    [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
-	
-	[codesignTask launch];
+	[self executeCommand: @"/usr/bin/codesign"
+		withArgs: arguments
+		onCompleteReadingOutput: @selector( checkCodesigning: )
+	];
 }
 
 - (void) watchCodesigning: (NSNotification *) notification
@@ -607,21 +590,13 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	if( ! appPath )
 		return;
 
-	NSTask *verifyTask = [[NSTask alloc] init];
-	[verifyTask setLaunchPath: @"/usr/bin/codesign"];
-	[verifyTask setArguments: [NSArray arrayWithObjects: @"-v", appPath, nil]];
-	
 	NSLog( @"Verifying %@", appPath );
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Verifying %@", appName]];
 	
-	NSPipe *pipe = [NSPipe pipe];
-	[verifyTask setStandardOutput: pipe];
-	[verifyTask setStandardError: pipe];
-
-	[notificationCenter addObserver: self selector: @selector( checkVerificationProcess: ) name:NSFileHandleReadToEndOfFileCompletionNotification object: [pipe fileHandleForReading]];
-    [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
-	
-	[verifyTask launch];
+	[self executeCommand: @"/usr/bin/codesign"
+		withArgs: [NSArray arrayWithObjects: @"-v", appPath, nil]
+		onCompleteReadingOutput: @selector( checkVerificationProcess: )
+	];
 }
 
 - (void) watchVerificationProcess: (NSNotification *) notification
@@ -817,18 +792,10 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	NSLog(@"Getting Certificate IDs");
 	[statusLabel setStringValue: @"Getting Signing Certificate IDs"];
 	
-	NSTask *certTask = [[NSTask alloc] init];
-	[certTask setLaunchPath: @"/usr/bin/security"];
-	[certTask setArguments: [NSArray arrayWithObjects: @"find-identity", @"-v", @"-p", @"codesigning", nil]];
-	
-	NSPipe *pipe = [NSPipe pipe];
-	[certTask setStandardOutput: pipe];
-	[certTask setStandardError: pipe];
-
-	[notificationCenter addObserver: self selector: @selector( checkCerts: ) name:NSFileHandleReadToEndOfFileCompletionNotification object: [pipe fileHandleForReading]];
-    [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
-	
-	[certTask launch];
+	[self executeCommand: @"/usr/bin/security"
+		withArgs: [NSArray arrayWithObjects: @"find-identity", @"-v", @"-p", @"codesigning", nil]
+		onCompleteReadingOutput: @selector( checkCerts: )
+	];
 }
 
 - (void) watchGetCerts: (NSNotification *) notification
@@ -910,6 +877,22 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		
 	[notificationCenter addObserver: self selector: selector name: NSTaskDidTerminateNotification object: task];
 		
+	[task launch];
+}
+
+- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onCompleteReadingOutput: (SEL) selector
+{
+	NSTask *task = [[NSTask alloc] init];
+	[task setLaunchPath: executablePath];
+	[task setArguments: args];
+
+	NSPipe *pipe = [NSPipe pipe];
+	[task setStandardOutput: pipe];
+	[task setStandardError: pipe];
+
+	[notificationCenter addObserver: self selector: selector name:NSFileHandleReadToEndOfFileCompletionNotification object: [pipe fileHandleForReading]];
+    [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
+
 	[task launch];
 }
 
