@@ -176,19 +176,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	NSLog(@"Unzipping done");
 	[statusLabel setStringValue: @"Original app extracted"];
 
-	if( changeBundleIDCheckbox.state == NSOnState )
-	{
-		[self doBundleIDChange: bundleIDField.stringValue];
-	}
-	
-	if( [[provisioningPathField stringValue] isEqualTo: @""] )
-	{
-		[self doCodeSigning];
-	}
-	else
-	{
-		[self doProvisioning];
-	}
+	[self processPayload];
 }
 
 - (void) checkCopy: (NSNotification *) notification
@@ -198,6 +186,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	NSLog(@"Copy done");
 	[statusLabel setStringValue: @".xcarchive app copied"];
 	
+	[self processPayload];
+}
+
+- (void) processPayload
+{
 	if( changeBundleIDCheckbox.state == NSOnState )
 	{
 		[self doBundleIDChange: bundleIDField.stringValue];
