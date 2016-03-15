@@ -834,20 +834,24 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	NSArray *args = [[NSProcessInfo processInfo] arguments];
 	if( args.count == 2 )
 	{
-		NSDictionary *params = [NSDictionary dictionaryWithContentsOfFile: [args objectAtIndex: 1]];
-		NSLog( @"%@", params );
+		NSURL *plistURL = [NSURL fileURLWithPath: [args objectAtIndex: 1]];
 		
-		NSString *ipaPath = [params objectForKey: @"ipa-path"];
+		// cwd to plist directory so that paths are relative to the plist
+		[fileManager changeCurrentDirectoryPath: [[plistURL path] stringByDeletingLastPathComponent]];
+		
+		NSDictionary *params = [NSDictionary dictionaryWithContentsOfFile: [plistURL path]];
+		
 		NSString *mobileProvisionPath = [params objectForKey: @"mobile-provision-path"];
 		NSString *entitlementsPath = [params objectForKey: @"entitlements-path"];
 		NSString *bundleID = [params objectForKey: @"bundle-id"];
 		NSString *certificateIdentity = [params objectForKey: @"certificate-identity"];
+		NSString *ipaPath = [params objectForKey: @"ipa-path"];
 		
 		if( mobileProvisionPath != nil )
-			provisioningPathField.stringValue = mobileProvisionPath;
+			provisioningPathField.stringValue = [[NSURL fileURLWithPath: mobileProvisionPath] path];
 		
 		if( entitlementsPath != nil )
-			entitlementField.stringValue = entitlementsPath;
+			entitlementField.stringValue = [[NSURL fileURLWithPath: entitlementsPath] path];
 		
 		if( bundleID != nil )
 		{
@@ -867,7 +871,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 		if( ipaPath != nil )
 		{
-			pathField.stringValue = ipaPath;
+			pathField.stringValue = [[NSURL fileURLWithPath: ipaPath] path];
 			[self resign: self];
 		}
 	}
