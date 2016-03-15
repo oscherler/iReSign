@@ -242,12 +242,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) doITunesMetadataBundleIDChange: (NSString *) newBundleID
 {
-	NSString *infoPlistPath = [self findFirstFileInDirectory: workingPath passingTest: ^( NSString *file ) {
-		return [file isEqualToString: @"Info.plist"];
-	}];
+	NSString *infoPlistPath = [workingPath stringByAppendingPathComponent: kInfoPlistFilename];
 	
 	[self changeBundleIDForFile: infoPlistPath bundleIDKey: kKeyBundleIDPlistiTunesArtwork newBundleID: newBundleID plistOutOptions: NSPropertyListXMLFormat_v1_0];
-	
 }
 
 - (void) doAppBundleIDChange: (NSString *) newBundleID
@@ -374,9 +371,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	[statusLabel setStringValue: @"Generating entitlements"];
 
-	if( ! appPath )
-		return;
-	
 	[self executeCommand:@"/usr/bin/security"
 		withArgs:@[ @"cms", @"-D", @"-i", provisioningPathField.stringValue ]
 		onCompleteReadingOutput: @selector( checkEntitlementsFix: )
@@ -439,17 +433,14 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	}
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Codesigning %@", appName]];
 	
-	if( appPath )
+	if( hasFrameworks )
 	{
-		if( hasFrameworks )
-		{
-			[self signFile: [frameworks lastObject]];
-			[frameworks removeLastObject];
-		}
-		else
-		{
-			[self signFile: appPath];
-		}
+		[self signFile: [frameworks lastObject]];
+		[frameworks removeLastObject];
+	}
+	else
+	{
+		[self signFile: appPath];
 	}
 }
 
@@ -528,9 +519,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) doVerifySignature
 {
-	if( ! appPath )
-		return;
-
 	NSLog( @"Verifying %@", appPath );
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Verifying %@", appName]];
 	
@@ -563,9 +551,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) doZip
 {
-	if( ! appPath )
-		return;
-
 	NSArray *destinationPathComponents = [sourcePath pathComponents];
 	NSString *destinationPath = @"";
 	
@@ -857,7 +842,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[task setLaunchPath: executablePath];
 	[task setArguments: args];
 		
-	[notificationCenter addObserver: self selector: selector name: NSTaskDidTerminateNotification object: task];
+	[notificationCenter addObserver: self
+		selector: selector
+		name: NSTaskDidTerminateNotification
+		object: task
+	];
 		
 	[task launch];
 }
@@ -872,7 +861,12 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[task setStandardOutput: pipe];
 	[task setStandardError: pipe];
 
-	[notificationCenter addObserver: self selector: selector name:NSFileHandleReadToEndOfFileCompletionNotification object: [pipe fileHandleForReading]];
+	[notificationCenter addObserver: self
+		selector: selector
+		name: NSFileHandleReadToEndOfFileCompletionNotification
+		object: [pipe fileHandleForReading]
+	];
+
     [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
 
 	[task launch];
