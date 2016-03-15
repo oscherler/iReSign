@@ -62,6 +62,8 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (IBAction) resign: (id) sender
 {
+	[self disableControls];
+
 	//Save cert name
 	[defaults setValue: [NSNumber numberWithInteger: [certComboBox indexOfSelectedItem]] forKey: @"CERT_INDEX"];
 	[defaults setValue: [entitlementField stringValue] forKey: @"ENTITLEMENT_PATH"];
@@ -72,94 +74,106 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	codesigningResult = nil;
 	verificationResult = nil;
 	
+	NSString *certificateIdentity = [certComboBox objectValue];
 	sourcePath = [pathField stringValue];
-	workingPath = [NSTemporaryDirectory() stringByAppendingPathComponent: @"com.appulize.iresign"];
-	
-	if( ! [certComboBox objectValue] )
+	NSString *sourceExtension = [[sourcePath pathExtension] lowercaseString];
+
+	// validate certificate
+	if( ! certificateIdentity )
 	{
 		[self abort: @"You must choose an signing certificate from dropdown."];
 
 		return;
 	}
 
-	NSString *sourceExtension = [[sourcePath pathExtension] lowercaseString];
+	[self setUpWorkingDirectory];
 
-	if( ! [sourceExtension isEqualToString: @"ipa"] && ! [sourceExtension isEqualToString: @"xcarchive"] )
+	if( [sourceExtension isEqualToString: @"ipa"] )
+	{
+		[self processIPA];
+	}
+	else if( [sourceExtension isEqualToString: @"xcarchive"] )
+	{
+		[self processArchive];
+	}
+	else
 	{
 		[self abort: @"You must choose an *.ipa or *.xcarchive file"];
 		
 		return;
 	}
+}
 
-	[self disableControls];
-	
+- (void) setUpWorkingDirectory
+{
+	workingPath = [NSTemporaryDirectory() stringByAppendingPathComponent: @"com.appulize.iresign"];
+
 	NSLog( @"Setting up working directory in %@", workingPath );
 	[statusLabel setHidden: NO];
 	[statusLabel setStringValue: @"Setting up working directory"];
 	
 	[fileManager removeItemAtPath: workingPath error: nil];
-	
 	[fileManager createDirectoryAtPath: workingPath withIntermediateDirectories: TRUE attributes: nil error: nil];
+}
+
+- (void) processIPA
+{
+	NSLog( @"Unzipping %@", sourcePath );
+	[statusLabel setStringValue: @"Extracting original app"];
 	
-	if( [[[sourcePath pathExtension] lowercaseString] isEqualToString: @"ipa"] )
-	{
-		NSLog( @"Unzipping %@", sourcePath );
-		[statusLabel setStringValue: @"Extracting original app"];
-		
-		[self executeCommand: @"/usr/bin/unzip"
-			withArgs: [NSArray arrayWithObjects: @"-q", sourcePath, @"-d", workingPath, nil]
-			onTerminate: @selector( checkUnzip: )
-		];
-	}
-	else
-	{
-		NSString* payloadPath = [workingPath stringByAppendingPathComponent: kPayloadDirName];
-		
-		NSLog( @"Setting up %@ path in %@", kPayloadDirName, payloadPath );
-		[statusLabel setStringValue: [NSString stringWithFormat: @"Setting up %@ path", kPayloadDirName]];
-		
-		[fileManager createDirectoryAtPath: payloadPath withIntermediateDirectories: TRUE attributes: nil error: nil];
-		
-		NSLog( @"Retrieving %@", kInfoPlistFilename );
-		[statusLabel setStringValue: [NSString stringWithFormat: @"Retrieving %@", kInfoPlistFilename]];
-		
-		NSString* infoPListPath = [sourcePath stringByAppendingPathComponent: kInfoPlistFilename];
-		
-		NSDictionary* infoPListDict = [NSDictionary dictionaryWithContentsOfFile: infoPListPath];
-		
-		if( infoPListDict == nil )
-		{
-			[self abort: [NSString stringWithFormat: @"Retrieve %@ failed", kInfoPlistFilename]];
-			
-			return;
-		}
+	[self executeCommand: @"/usr/bin/unzip"
+		withArgs: [NSArray arrayWithObjects: @"-q", sourcePath, @"-d", workingPath, nil]
+		onTerminate: @selector( checkUnzip: )
+	];
+}
 
-		NSString* applicationPath = nil;
+- (void) processArchive
+{
+	NSString* payloadPath = [workingPath stringByAppendingPathComponent: kPayloadDirName];
+	
+	NSLog( @"Setting up %@ path in %@", kPayloadDirName, payloadPath );
+	[statusLabel setStringValue: [NSString stringWithFormat: @"Setting up %@ path", kPayloadDirName]];
+	
+	[fileManager createDirectoryAtPath: payloadPath withIntermediateDirectories: TRUE attributes: nil error: nil];
+	
+	NSLog( @"Retrieving %@", kInfoPlistFilename );
+	[statusLabel setStringValue: [NSString stringWithFormat: @"Retrieving %@", kInfoPlistFilename]];
+	
+	NSString* infoPListPath = [sourcePath stringByAppendingPathComponent: kInfoPlistFilename];
+	
+	NSDictionary* infoPListDict = [NSDictionary dictionaryWithContentsOfFile: infoPListPath];
+	
+	if( infoPListDict == nil )
+	{
+		[self abort: [NSString stringWithFormat: @"Retrieve %@ failed", kInfoPlistFilename]];
 		
-		NSDictionary* applicationPropertiesDict = [infoPListDict objectForKey: kKeyInfoPlistApplicationProperties];
-		
-		if( applicationPropertiesDict != nil )
-		{
-			applicationPath = [applicationPropertiesDict objectForKey: kKeyInfoPlistApplicationPath];
-		}
-		
-		if( applicationPath == nil )
-		{
-			[self abort: [NSString stringWithFormat: @"Unable to parse %@", kInfoPlistFilename]];
-			
-			return;
-		}
-		
-		applicationPath = [[sourcePath stringByAppendingPathComponent: kProductsDirName] stringByAppendingPathComponent: applicationPath];
-		
-		NSLog( @"Copying %@ to %@ path in %@", applicationPath, kPayloadDirName, payloadPath );
-		[statusLabel setStringValue: [NSString stringWithFormat: @"Copying .xcarchive app to %@ path", kPayloadDirName]];
-
-		[self executeCommand: @"/bin/cp"
-			withArgs: [NSArray arrayWithObjects: @"-r", applicationPath, payloadPath, nil]
-			onTerminate: @selector( checkCopy: )
-		];
+		return;
 	}
+
+	NSString* applicationPath = nil;
+	NSDictionary* applicationPropertiesDict = [infoPListDict objectForKey: kKeyInfoPlistApplicationProperties];
+	
+	if( applicationPropertiesDict != nil )
+	{
+		applicationPath = [applicationPropertiesDict objectForKey: kKeyInfoPlistApplicationPath];
+	}
+	
+	if( applicationPath == nil )
+	{
+		[self abort: [NSString stringWithFormat: @"Unable to parse %@", kInfoPlistFilename]];
+		
+		return;
+	}
+	
+	applicationPath = [[sourcePath stringByAppendingPathComponent: kProductsDirName] stringByAppendingPathComponent: applicationPath];
+	
+	NSLog( @"Copying %@ to %@ path in %@", applicationPath, kPayloadDirName, payloadPath );
+	[statusLabel setStringValue: [NSString stringWithFormat: @"Copying .xcarchive app to %@ path", kPayloadDirName]];
+
+	[self executeCommand: @"/bin/cp"
+		withArgs: [NSArray arrayWithObjects: @"-r", applicationPath, payloadPath, nil]
+		onTerminate: @selector( checkCopy: )
+	];
 }
 
 - (void) checkUnzip: (NSNotification *) notification
