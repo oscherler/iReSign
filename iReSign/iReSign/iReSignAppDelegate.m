@@ -110,13 +110,10 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		NSLog( @"Unzipping %@", sourcePath );
 		[statusLabel setStringValue: @"Extracting original app"];
 		
-		NSTask *unzipTask = [[NSTask alloc] init];
-		[unzipTask setLaunchPath: @"/usr/bin/unzip"];
-		[unzipTask setArguments: [NSArray arrayWithObjects: @"-q", sourcePath, @"-d", workingPath, nil]];
-		
-		[notificationCenter addObserver: self selector: @selector( checkUnzip: ) name: NSTaskDidTerminateNotification object: unzipTask];
-		
-		[unzipTask launch];
+		[self executeCommand: @"/usr/bin/unzip"
+			withArgs: [NSArray arrayWithObjects: @"-q", sourcePath, @"-d", workingPath, nil]
+			onTerminate: @selector( checkUnzip: )
+		];
 	}
 	else
 	{
@@ -165,14 +162,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		
 		NSLog( @"Copying %@ to %@ path in %@", applicationPath, kPayloadDirName, payloadPath );
 		[statusLabel setStringValue: [NSString stringWithFormat: @"Copying .xcarchive app to %@ path", kPayloadDirName]];
-		
-		NSTask *copyTask = [[NSTask alloc] init];
-		[copyTask setLaunchPath: @"/bin/cp"];
-		[copyTask setArguments: [NSArray arrayWithObjects: @"-r", applicationPath, payloadPath, nil]];
-		
-		[notificationCenter addObserver: self selector: @selector( checkCopy: ) name: NSTaskDidTerminateNotification object: copyTask];
-		
-		[copyTask launch];
+
+		[self executeCommand: @"/bin/cp"
+			withArgs: [NSArray arrayWithObjects: @"-r", applicationPath, payloadPath, nil]
+			onTerminate: @selector( checkCopy: )
+		];
 	}
 }
 
@@ -311,14 +305,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	}
 	
 	NSString *targetPath = [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"];
-	
-	NSTask *provisioningTask = [[NSTask alloc] init];
-	[provisioningTask setLaunchPath: @"/bin/cp"];
-	[provisioningTask setArguments: [NSArray arrayWithObjects: [provisioningPathField stringValue], targetPath, nil]];
-	
-	[provisioningTask launch];
-	
-	[notificationCenter addObserver: self selector: @selector( checkProvisioning: ) name: NSTaskDidTerminateNotification object: provisioningTask];
+
+	[self executeCommand: @"/bin/cp"
+		withArgs: [NSArray arrayWithObjects: [provisioningPathField stringValue], targetPath, nil]
+		onTerminate: @selector( checkProvisioning: )
+	];
 }
 
 - (void) checkProvisioning: (NSNotification *) notification
@@ -680,17 +671,13 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	NSLog( @"Dest: %@", destinationPath );
 	
-	NSTask *zipTask = [[NSTask alloc] init];
-	[zipTask setLaunchPath: @"/usr/bin/zip"];
-	[zipTask setCurrentDirectoryPath: workingPath];
-	[zipTask setArguments: [NSArray arrayWithObjects: @"-qry", destinationPath, @".", nil]];
-	
-	[notificationCenter addObserver: self selector: @selector( checkZip: ) name: NSTaskDidTerminateNotification object: zipTask];
-	
 	NSLog( @"Zipping %@", destinationPath );
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Saving %@", fileName]];
-	
-	[zipTask launch];
+
+	[self executeCommand: @"/usr/bin/zip"
+		withArgs: [NSArray arrayWithObjects: @"-qry", destinationPath, @".", nil]
+		onTerminate: @selector( checkZip: )
+	];
 }
 
 - (void) checkZip: (NSNotification *) notification
@@ -913,6 +900,17 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	}
 	
 	return YES;
+}
+
+- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onTerminate: (SEL) selector
+{
+	NSTask *task = [[NSTask alloc] init];
+	[task setLaunchPath: executablePath];
+	[task setArguments: args];
+		
+	[notificationCenter addObserver: self selector: selector name: NSTaskDidTerminateNotification object: task];
+		
+	[task launch];
 }
 
 #pragma mark - Alert Methods

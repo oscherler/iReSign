@@ -101,4 +101,6 @@
 
 - (void) showAlertOfKind: (NSAlertStyle) style WithTitle: (NSString *) title AndMessage: (NSString *) message;
 
+- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onTerminate: (SEL) selector;
+
 @end
