@@ -205,27 +205,20 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) processPayload
 {
-	NSArray *payloadDirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
-	
-	appPath = nil;
-	appName = nil;
-	for( NSString *file in payloadDirContents )
-	{
-		if( [[[file pathExtension] lowercaseString] isEqualToString: @"app"] )
-		{
-			appPath = [[workingPath stringByAppendingPathComponent: kPayloadDirName] stringByAppendingPathComponent: file];
-			appName = file;
-			break;
-		}
-	}
-	
-	if( appPath == nil )
+	NSString *payloadPath = [workingPath stringByAppendingPathComponent: kPayloadDirName];
+	appName = [self findFirstFileInDirectory: payloadPath passingTest: ^( NSString *file ) {
+		return [[[file pathExtension] lowercaseString] isEqualToString: @"app"];
+	}];
+
+	if( appName == nil )
 	{
 		[self abort: @"No app found."];
 		
 		return;
 	}
 
+	appPath = [payloadPath stringByAppendingPathComponent: appName];
+	
 	if( changeBundleIDCheckbox.state == NSOnState )
 	{
 		[self doBundleIDChange: bundleIDField.stringValue];
@@ -249,17 +242,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) doITunesMetadataBundleIDChange: (NSString *) newBundleID
 {
-	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: workingPath error: nil];
-	NSString *infoPlistPath = nil;
-	
-	for( NSString *file in dirContents )
-	{
-		if( [[[file pathExtension] lowercaseString] isEqualToString: @"plist"] )
-		{
-			infoPlistPath = [workingPath stringByAppendingPathComponent: file];
-			break;
-		}
-	}
+	NSString *infoPlistPath = [self findFirstFileInDirectory: workingPath passingTest: ^( NSString *file ) {
+		return [file isEqualToString: @"Info.plist"];
+	}];
 	
 	[self changeBundleIDForFile: infoPlistPath bundleIDKey: kKeyBundleIDPlistiTunesArtwork newBundleID: newBundleID plistOutOptions: NSPropertyListXMLFormat_v1_0];
 	
@@ -891,6 +876,19 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
     [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
 
 	[task launch];
+}
+
+- (NSString *) findFirstFileInDirectory: (NSString *) directory passingTest: ( BOOL (^)( NSString *fileName ) ) test
+{
+	NSArray *directoryContents = [fileManager contentsOfDirectoryAtPath: directory error: nil];
+	NSUInteger index = [directoryContents indexOfObjectPassingTest: ^( NSString *file, NSUInteger index, BOOL *stop ) {
+		return test( file );
+	}];
+
+	if( index == NSNotFound )
+		return nil;
+
+	return [directoryContents objectAtIndex: index];
 }
 
 #pragma mark - Alert Methods
