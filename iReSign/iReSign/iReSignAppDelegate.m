@@ -420,15 +420,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	];
 }
 
-- (void) watchEntitlements: (NSNotification *) notification
-{
-	entitlementsResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
-}
-
 - (void) checkEntitlementsFix: (NSNotification *) notification
 {
-	[self watchEntitlements: notification];
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
+
+	entitlementsResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
 
 	NSLog(@"Entitlements fixed done");
 	[statusLabel setStringValue: @"Entitlements generated"];
@@ -557,15 +553,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	];
 }
 
-- (void) watchCodesigning: (NSNotification *) notification
-{
-	codesigningResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
-}
-
 - (void) checkCodesigning: (NSNotification *) notification
 {
-	[self watchCodesigning: notification];
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
+
+	codesigningResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
 
 	if( frameworks.count > 0 )
 	{
@@ -599,15 +591,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	];
 }
 
-- (void) watchVerificationProcess: (NSNotification *) notification
-{
-	verificationResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
-}
-
 - (void) checkVerificationProcess: (NSNotification *) notification
 {
-	[self watchVerificationProcess: notification];
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
+
+	verificationResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
 
 	if( [verificationResult length] == 0 )
 	{
@@ -798,17 +786,16 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	];
 }
 
-- (void) watchGetCerts: (NSNotification *) notification
+- (void) parseCerts: (NSString *) certData
 {
-	NSString *securityResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
 	// Verify the security result
-	if( securityResult == nil || securityResult.length < 1 )
+	if( certData == nil || certData.length < 1 )
 	{
 		// Nothing in the result, return
 		return;
 	}
 
-	NSArray *rawResult = [securityResult componentsSeparatedByString: @"\""];
+	NSArray *rawResult = [certData componentsSeparatedByString: @"\""];
 	NSMutableArray *tempGetCertsResult = [NSMutableArray arrayWithCapacity: 20];
 	for( int i = 0; i <= [rawResult count] - 2; i += 2 )
 	{
@@ -827,8 +814,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) checkCerts: (NSNotification *) notification
 {
-	[self watchGetCerts: notification];
 	[notificationCenter removeObserver: self name: NSFileHandleReadToEndOfFileCompletionNotification object: [notification object]];
+
+	[self parseCerts: [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding]];
 	
 	if( [certComboBoxItems count] == 0 )
 	{

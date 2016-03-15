@@ -68,17 +68,14 @@
 - (void) doProvisioning;
 - (void) checkProvisioning: (NSNotification *) notification;
 - (void) doEntitlementsFixing;
-- (void) watchEntitlements: (NSNotification *) notification;
 - (void) checkEntitlementsFix: (NSNotification *) notification;
 - (void) doEntitlementsEdit;
 
 - (void) doCodeSigning;
 - (void) signFile: (NSString*) filePath;
-- (void) watchCodesigning: (NSNotification *) notification;
 - (void) checkCodesigning: (NSNotification *) notification;
 
 - (void) doVerifySignature;
-- (void) watchVerificationProcess: (NSNotification *) notification;
 -(void) checkVerificationProcess: (NSNotification *) notification;
 
 - (void) doZip;
@@ -96,7 +93,7 @@
 - (id) comboBox: (NSComboBox *) aComboBox objectValueForItemAtIndex: (NSInteger) index;
 
 - (void) getCerts;
-- (void) watchGetCerts: (NSNotification *) notification;
+- (void) parseCerts: (NSString *) certData;
 - (void) checkCerts: (NSNotification *) notification;
 
 - (void) showAlertOfKind: (NSAlertStyle) style WithTitle: (NSString *) title AndMessage: (NSString *) message;
