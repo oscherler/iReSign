@@ -20,11 +20,13 @@
 	NSNotificationCenter *notificationCenter;
 	
 	NSString *sourcePath;
+	NSString *workingPath;
+
 	NSString *appPath;
+	NSString *appName;
+
 	NSString *frameworksDirPath;
 	NSString *frameworkPath;
-	NSString *workingPath;
-	NSString *appName;
 	NSString *fileName;
 	
 	NSString *entitlementsResult;

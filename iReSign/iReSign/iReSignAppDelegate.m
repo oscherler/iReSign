@@ -205,6 +205,27 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) processPayload
 {
+	NSArray *payloadDirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
+	
+	appPath = nil;
+	appName = nil;
+	for( NSString *file in payloadDirContents )
+	{
+		if( [[[file pathExtension] lowercaseString] isEqualToString: @"app"] )
+		{
+			appPath = [[workingPath stringByAppendingPathComponent: kPayloadDirName] stringByAppendingPathComponent: file];
+			appName = file;
+			break;
+		}
+	}
+	
+	if( appPath == nil )
+	{
+		[self abort: @"No app found."];
+		
+		return;
+	}
+
 	if( changeBundleIDCheckbox.state == NSOnState )
 	{
 		[self doBundleIDChange: bundleIDField.stringValue];
@@ -250,20 +271,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (BOOL) doAppBundleIDChange: (NSString *) newBundleID
 {
-	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
-	NSString *infoPlistPath = nil;
-	
-	for( NSString *file in dirContents )
-	{
-		if( [[[file pathExtension] lowercaseString] isEqualToString: @"app"] )
-		{
-			infoPlistPath = [[[workingPath stringByAppendingPathComponent: kPayloadDirName]
-				stringByAppendingPathComponent: file]
-				stringByAppendingPathComponent: kInfoPlistFilename
-			];
-			break;
-		}
-	}
+	NSString *infoPlistPath = infoPlistPath = [appPath stringByAppendingPathComponent: kInfoPlistFilename];
 	
 	return [self changeBundleIDForFile: infoPlistPath bundleIDKey: kKeyBundleIDPlistApp newBundleID: newBundleID plistOutOptions: NSPropertyListBinaryFormat_v1_0];
 }
@@ -285,20 +293,10 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) doProvisioning
 {
-	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
-	
-	for( NSString *file in dirContents )
+	if( [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
 	{
-		if( [[[file pathExtension] lowercaseString] isEqualToString: @"app"] )
-		{
-			appPath = [[workingPath stringByAppendingPathComponent: kPayloadDirName] stringByAppendingPathComponent: file];
-			if( [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
-			{
-				NSLog(@"Found embedded.mobileprovision, deleting.");
-				[fileManager removeItemAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"] error: nil];
-			}
-			break;
-		}
+		NSLog(@"Found embedded.mobileprovision, deleting.");
+		[fileManager removeItemAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"] error: nil];
 	}
 	
 	NSString *targetPath = [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"];
@@ -313,85 +311,74 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 {
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
 	
-	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
-	
-	for( NSString *file in dirContents )
+	if( ! [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
 	{
-		if( [[[file pathExtension] lowercaseString] isEqualToString: @"app"] )
+		[self abort: @"Provisioning failed"];
+		
+		return;
+	}
+	
+	BOOL identifierOK = FALSE;
+	NSString *identifierInProvisioning = @"";
+	
+	NSString *embeddedProvisioning = [NSString stringWithContentsOfFile: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"] encoding: NSASCIIStringEncoding error: nil];
+	NSArray* embeddedProvisioningLines = [embeddedProvisioning componentsSeparatedByCharactersInSet: 
+		[NSCharacterSet newlineCharacterSet]
+	];
+	
+	for( int i = 0; i < [embeddedProvisioningLines count]; i++ )
+	{
+		if( [[embeddedProvisioningLines objectAtIndex: i] rangeOfString: @"application-identifier"].location != NSNotFound )
 		{
-			appPath = [[workingPath stringByAppendingPathComponent: kPayloadDirName] stringByAppendingPathComponent: file];
-			if( ! [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
+			NSInteger fromPosition = [[embeddedProvisioningLines objectAtIndex: i + 1] rangeOfString: @"<string>"].location + 8;
+			
+			NSInteger toPosition = [[embeddedProvisioningLines objectAtIndex: i + 1] rangeOfString: @"</string>"].location;
+			
+			NSRange range;
+			range.location = fromPosition;
+			range.length = toPosition - fromPosition;
+			
+			NSString *fullIdentifier = [[embeddedProvisioningLines objectAtIndex: i + 1] substringWithRange: range];
+			
+			NSArray *identifierComponents = [fullIdentifier componentsSeparatedByString: @"."];
+			
+			if( [[identifierComponents lastObject] isEqualTo: @"*"] )
 			{
-				[self abort: @"Provisioning failed"];
-				
-				return;
-			}
-			
-			BOOL identifierOK = FALSE;
-			NSString *identifierInProvisioning = @"";
-			
-			NSString *embeddedProvisioning = [NSString stringWithContentsOfFile: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"] encoding: NSASCIIStringEncoding error: nil];
-			NSArray* embeddedProvisioningLines = [embeddedProvisioning componentsSeparatedByCharactersInSet: 
-				[NSCharacterSet newlineCharacterSet]
-			];
-			
-			for( int i = 0; i < [embeddedProvisioningLines count]; i++ )
-			{
-				if( [[embeddedProvisioningLines objectAtIndex: i] rangeOfString: @"application-identifier"].location != NSNotFound )
-				{
-					NSInteger fromPosition = [[embeddedProvisioningLines objectAtIndex: i + 1] rangeOfString: @"<string>"].location + 8;
-					
-					NSInteger toPosition = [[embeddedProvisioningLines objectAtIndex: i + 1] rangeOfString: @"</string>"].location;
-					
-					NSRange range;
-					range.location = fromPosition;
-					range.length = toPosition - fromPosition;
-					
-					NSString *fullIdentifier = [[embeddedProvisioningLines objectAtIndex: i + 1] substringWithRange: range];
-					
-					NSArray *identifierComponents = [fullIdentifier componentsSeparatedByString: @"."];
-					
-					if( [[identifierComponents lastObject] isEqualTo: @"*"] )
-					{
-						identifierOK = TRUE;
-					}
-					
-					for( int i = 1; i < [identifierComponents count]; i++ )
-					{
-						identifierInProvisioning = [identifierInProvisioning stringByAppendingString: [identifierComponents objectAtIndex: i]];
-						if( i < [identifierComponents count] - 1 )
-						{
-							identifierInProvisioning = [identifierInProvisioning stringByAppendingString: @"."];
-						}
-					}
-					break;
-				}
-			}
-			
-			NSLog( @"Mobileprovision identifier: %@", identifierInProvisioning );
-			
-			NSDictionary *infoplist = [NSDictionary dictionaryWithContentsOfFile: [appPath stringByAppendingPathComponent: @"Info.plist"]];
-			if( [identifierInProvisioning isEqualTo: [infoplist objectForKey: kKeyBundleIDPlistApp]] )
-			{
-				NSLog(@"Identifiers match");
 				identifierOK = TRUE;
 			}
 			
-			if( identifierOK )
+			for( int i = 1; i < [identifierComponents count]; i++ )
 			{
-				NSLog(@"Provisioning completed.");
-				[statusLabel setStringValue: @"Provisioning completed"];
-				[self doEntitlementsFixing];
+				identifierInProvisioning = [identifierInProvisioning stringByAppendingString: [identifierComponents objectAtIndex: i]];
+				if( i < [identifierComponents count] - 1 )
+				{
+					identifierInProvisioning = [identifierInProvisioning stringByAppendingString: @"."];
+				}
 			}
-			else
-			{
-				[self abort: @"Product identifiers don't match"];
-				
-				return;
-			}
-
 			break;
 		}
+	}
+	
+	NSLog( @"Mobileprovision identifier: %@", identifierInProvisioning );
+	
+	NSDictionary *infoplist = [NSDictionary dictionaryWithContentsOfFile: [appPath stringByAppendingPathComponent: @"Info.plist"]];
+	if( [identifierInProvisioning isEqualTo: [infoplist objectForKey: kKeyBundleIDPlistApp]] )
+	{
+		NSLog(@"Identifiers match");
+		identifierOK = TRUE;
+	}
+	
+	if( identifierOK )
+	{
+		NSLog(@"Provisioning completed.");
+		[statusLabel setStringValue: @"Provisioning completed"];
+		[self doEntitlementsFixing];
+	}
+	else
+	{
+		[self abort: @"Product identifiers don't match"];
+		
+		return;
 	}
 }
 
@@ -447,41 +434,29 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) doCodeSigning
 {
-	appPath = nil;
 	frameworksDirPath = nil;
 	hasFrameworks = NO;
 	frameworks = [[NSMutableArray alloc] init];
 	
-	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
-	
-	for( NSString *file in dirContents )
+	frameworksDirPath = [appPath stringByAppendingPathComponent: kFrameworksDirName];
+	NSLog( @"Found %@", appPath );
+	if( [fileManager fileExistsAtPath: frameworksDirPath] )
 	{
-		if( [[[file pathExtension] lowercaseString] isEqualToString: @"app"] )
+		NSLog( @"Found %@", frameworksDirPath );
+		hasFrameworks = YES;
+		NSArray *frameworksContents = [fileManager contentsOfDirectoryAtPath: frameworksDirPath error: nil];
+		for( NSString *frameworkFile in frameworksContents )
 		{
-			appPath = [[workingPath stringByAppendingPathComponent: kPayloadDirName] stringByAppendingPathComponent: file];
-			frameworksDirPath = [appPath stringByAppendingPathComponent: kFrameworksDirName];
-			NSLog( @"Found %@", appPath );
-			appName = file;
-			if( [fileManager fileExistsAtPath: frameworksDirPath] )
+			NSString *extension = [[frameworkFile pathExtension] lowercaseString];
+			if( [extension isEqualTo: @"framework"] || [extension isEqualTo: @"dylib"] )
 			{
-				NSLog( @"Found %@", frameworksDirPath );
-				hasFrameworks = YES;
-				NSArray *frameworksContents = [fileManager contentsOfDirectoryAtPath: frameworksDirPath error: nil];
-				for( NSString *frameworkFile in frameworksContents )
-				{
-					NSString *extension = [[frameworkFile pathExtension] lowercaseString];
-					if( [extension isEqualTo: @"framework"] || [extension isEqualTo: @"dylib"] )
-					{
-						frameworkPath = [frameworksDirPath stringByAppendingPathComponent: frameworkFile];
-						NSLog( @"Found %@", frameworkPath );
-						[frameworks addObject: frameworkPath];
-					}
-				}
+				frameworkPath = [frameworksDirPath stringByAppendingPathComponent: frameworkFile];
+				NSLog( @"Found %@", frameworkPath );
+				[frameworks addObject: frameworkPath];
 			}
-			[statusLabel setStringValue: [NSString stringWithFormat: @"Codesigning %@", file]];
-			break;
 		}
 	}
+	[statusLabel setStringValue: [NSString stringWithFormat: @"Codesigning %@", appName]];
 	
 	if( appPath )
 	{
