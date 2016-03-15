@@ -31,6 +31,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	defaults = [NSUserDefaults standardUserDefaults];
 	fileManager = [NSFileManager defaultManager];
+	notificationCenter = [NSNotificationCenter defaultCenter];
 	
 	// Look up available signing certificates
 	[self getCerts];
@@ -113,7 +114,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		[unzipTask setLaunchPath: @"/usr/bin/unzip"];
 		[unzipTask setArguments: [NSArray arrayWithObjects: @"-q", sourcePath, @"-d", workingPath, nil]];
 		
-		[NSTimer scheduledTimerWithTimeInterval: 1.0 target: self selector: @selector( checkUnzip: ) userInfo: nil repeats: TRUE];
+		[notificationCenter addObserver: self selector: @selector( checkUnzip: ) name: NSTaskDidTerminateNotification object: unzipTask];
 		
 		[unzipTask launch];
 	}
@@ -169,18 +170,15 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		[copyTask setLaunchPath: @"/bin/cp"];
 		[copyTask setArguments: [NSArray arrayWithObjects: @"-r", applicationPath, payloadPath, nil]];
 		
-		[NSTimer scheduledTimerWithTimeInterval: 1.0 target: self selector: @selector( checkCopy: ) userInfo: nil repeats: TRUE];
+		[notificationCenter addObserver: self selector: @selector( checkCopy: ) name: NSTaskDidTerminateNotification object: copyTask];
 		
 		[copyTask launch];
 	}
 }
 
-- (void) checkUnzip: (NSTimer *) timer
+- (void) checkUnzip: (NSNotification *) notification
 {
-	if( [unzipTask isRunning] )
-		return;
-
-	[timer invalidate];
+	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
 	unzipTask = nil;
 	
 	if( ! [fileManager fileExistsAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName]] )
@@ -210,12 +208,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	}
 }
 
-- (void) checkCopy: (NSTimer *) timer
+- (void) checkCopy: (NSNotification *) notification
 {
-	if( [copyTask isRunning] )
-		return;
-
-	[timer invalidate];
+	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
 	copyTask = nil;
 	
 	NSLog(@"Copy done");
@@ -325,15 +320,12 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	[provisioningTask launch];
 	
-	[NSTimer scheduledTimerWithTimeInterval: 1.0 target: self selector: @selector(checkProvisioning: ) userInfo: nil repeats: TRUE];
+	[notificationCenter addObserver: self selector: @selector( checkProvisioning: ) name: NSTaskDidTerminateNotification object: provisioningTask];
 }
 
-- (void) checkProvisioning: (NSTimer *) timer
+- (void) checkProvisioning: (NSNotification *) notification
 {
-	if( [provisioningTask isRunning] )
-		return;
-
-	[timer invalidate];
+	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
 	provisioningTask = nil;
 	
 	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
@@ -439,35 +431,27 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[generateEntitlementsTask setArguments: @[@"cms", @"-D", @"-i", provisioningPathField.stringValue]];
 	[generateEntitlementsTask setCurrentDirectoryPath: workingPath];
 
-	[NSTimer scheduledTimerWithTimeInterval: 1.0 target: self selector: @selector(checkEntitlementsFix: ) userInfo: nil repeats: TRUE];
-
 	NSPipe *pipe = [NSPipe pipe];
 	[generateEntitlementsTask setStandardOutput: pipe];
 	[generateEntitlementsTask setStandardError: pipe];
-	NSFileHandle *handle = [pipe fileHandleForReading];
+
+	[notificationCenter addObserver: self selector: @selector( checkEntitlementsFix: ) name:NSFileHandleReadToEndOfFileCompletionNotification object: [pipe fileHandleForReading]];
+    [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
 
 	[generateEntitlementsTask launch];
-
-	[NSThread detachNewThreadSelector: @selector(watchEntitlements: )
-		toTarget: self withObject: handle
-	];
 }
 
-- (void) watchEntitlements: (NSFileHandle*) streamHandle
+- (void) watchEntitlements: (NSNotification *) notification
 {
-	@autoreleasepool
-	{
-		entitlementsResult = [[NSString alloc] initWithData: [streamHandle readDataToEndOfFile] encoding: NSASCIIStringEncoding];
-	}
+	entitlementsResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
 }
 
-- (void) checkEntitlementsFix: (NSTimer *) timer
+- (void) checkEntitlementsFix: (NSNotification *) notification
 {
-	if( [generateEntitlementsTask isRunning] )
-		return;
-
-	[timer invalidate];
+	[self watchEntitlements: notification];
+	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
 	generateEntitlementsTask = nil;
+
 	NSLog(@"Entitlements fixed done");
 	[statusLabel setStringValue: @"Entitlements generated"];
 	[self doEntitlementsEdit];
@@ -593,35 +577,27 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[codesignTask setLaunchPath: @"/usr/bin/codesign"];
 	[codesignTask setArguments: arguments];
 	
-	[NSTimer scheduledTimerWithTimeInterval: 1.0 target: self selector: @selector(checkCodesigning: ) userInfo: nil repeats: TRUE];
-	
 	NSPipe *pipe = [NSPipe pipe];
 	[codesignTask setStandardOutput: pipe];
 	[codesignTask setStandardError: pipe];
-	NSFileHandle *handle = [pipe fileHandleForReading];
+
+	[notificationCenter addObserver: self selector: @selector( checkCodesigning: ) name:NSFileHandleReadToEndOfFileCompletionNotification object: [pipe fileHandleForReading]];
+    [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
 	
 	[codesignTask launch];
-	
-	[NSThread detachNewThreadSelector: @selector(watchCodesigning: )
-		toTarget: self withObject: handle
-	];
 }
 
-- (void) watchCodesigning: (NSFileHandle*) streamHandle
+- (void) watchCodesigning: (NSNotification *) notification
 {
-	@autoreleasepool
-	{
-		codesigningResult = [[NSString alloc] initWithData: [streamHandle readDataToEndOfFile] encoding: NSASCIIStringEncoding];
-	}
+	codesigningResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
 }
 
-- (void) checkCodesigning: (NSTimer *) timer
+- (void) checkCodesigning: (NSNotification *) notification
 {
-	if( [codesignTask isRunning] )
-		return;
-	
-	[timer invalidate];
+	[self watchCodesigning: notification];
+	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
 	codesignTask = nil;
+
 	if( frameworks.count > 0 )
 	{
 		[self signFile: [frameworks lastObject]];
@@ -649,38 +625,30 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[verifyTask setLaunchPath: @"/usr/bin/codesign"];
 	[verifyTask setArguments: [NSArray arrayWithObjects: @"-v", appPath, nil]];
 	
-	[NSTimer scheduledTimerWithTimeInterval: 1.0 target: self selector: @selector(checkVerificationProcess: ) userInfo: nil repeats: TRUE];
-	
 	NSLog( @"Verifying %@", appPath );
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Verifying %@", appName]];
 	
 	NSPipe *pipe = [NSPipe pipe];
 	[verifyTask setStandardOutput: pipe];
 	[verifyTask setStandardError: pipe];
-	NSFileHandle *handle = [pipe fileHandleForReading];
+
+	[notificationCenter addObserver: self selector: @selector( checkVerificationProcess: ) name:NSFileHandleReadToEndOfFileCompletionNotification object: [pipe fileHandleForReading]];
+    [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
 	
 	[verifyTask launch];
-	
-	[NSThread detachNewThreadSelector: @selector(watchVerificationProcess: )
-		toTarget: self withObject: handle
-	];
 }
 
-- (void) watchVerificationProcess: (NSFileHandle*) streamHandle
+- (void) watchVerificationProcess: (NSNotification *) notification
 {
-	@autoreleasepool
-	{
-		verificationResult = [[NSString alloc] initWithData: [streamHandle readDataToEndOfFile] encoding: NSASCIIStringEncoding];
-	}
+	verificationResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
 }
 
-- (void) checkVerificationProcess: (NSTimer *) timer
+- (void) checkVerificationProcess: (NSNotification *) notification
 {
-	if( [verifyTask isRunning] )
-		return;
-
-	[timer invalidate];
+	[self watchVerificationProcess: notification];
+	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
 	verifyTask = nil;
+
 	if( [verificationResult length] == 0 )
 	{
 		NSLog(@"Verification done");
@@ -723,7 +691,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[zipTask setCurrentDirectoryPath: workingPath];
 	[zipTask setArguments: [NSArray arrayWithObjects: @"-qry", destinationPath, @".", nil]];
 	
-	[NSTimer scheduledTimerWithTimeInterval: 1.0 target: self selector: @selector(checkZip: ) userInfo: nil repeats: TRUE];
+	[notificationCenter addObserver: self selector: @selector( checkZip: ) name: NSTaskDidTerminateNotification object: zipTask];
 	
 	NSLog( @"Zipping %@", destinationPath );
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Saving %@", fileName]];
@@ -731,13 +699,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[zipTask launch];
 }
 
-- (void) checkZip: (NSTimer *) timer
+- (void) checkZip: (NSNotification *) notification
 {
-	if( [zipTask isRunning] )
-		return;
-
-	[timer invalidate];
+	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
 	zipTask = nil;
+
 	NSLog(@"Zipping done");
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Saved %@", fileName]];
 	
@@ -875,54 +841,47 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[certTask setLaunchPath: @"/usr/bin/security"];
 	[certTask setArguments: [NSArray arrayWithObjects: @"find-identity", @"-v", @"-p", @"codesigning", nil]];
 	
-	[NSTimer scheduledTimerWithTimeInterval: 1.0 target: self selector: @selector(checkCerts: ) userInfo: nil repeats: TRUE];
-	
 	NSPipe *pipe = [NSPipe pipe];
 	[certTask setStandardOutput: pipe];
 	[certTask setStandardError: pipe];
-	NSFileHandle *handle = [pipe fileHandleForReading];
+
+	[notificationCenter addObserver: self selector: @selector( checkCerts: ) name:NSFileHandleReadToEndOfFileCompletionNotification object: [pipe fileHandleForReading]];
+    [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
 	
 	[certTask launch];
-	
-	[NSThread detachNewThreadSelector: @selector(watchGetCerts: ) toTarget: self withObject: handle];
 }
 
-- (void) watchGetCerts: (NSFileHandle*) streamHandle
+- (void) watchGetCerts: (NSNotification *) notification
 {
-	@autoreleasepool
+	NSString *securityResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
+	// Verify the security result
+	if( securityResult == nil || securityResult.length < 1 )
 	{
-		NSString *securityResult = [[NSString alloc] initWithData: [streamHandle readDataToEndOfFile] encoding: NSASCIIStringEncoding];
-		// Verify the security result
-		if( securityResult == nil || securityResult.length < 1 )
-		{
-			// Nothing in the result, return
-			return;
-		}
-
-		NSArray *rawResult = [securityResult componentsSeparatedByString: @"\""];
-		NSMutableArray *tempGetCertsResult = [NSMutableArray arrayWithCapacity: 20];
-		for( int i = 0; i <= [rawResult count] - 2; i += 2 )
-		{
-			NSLog( @"i: %d", i + 1 );
-			if( rawResult.count - 1 >= i + 1 )
-			{
-				// Valid object
-				[tempGetCertsResult addObject: [rawResult objectAtIndex: i + 1]];
-			}
-		}
-		
-		certComboBoxItems = [NSMutableArray arrayWithArray: tempGetCertsResult];
-		
-		[certComboBox reloadData];
+		// Nothing in the result, return
+		return;
 	}
+
+	NSArray *rawResult = [securityResult componentsSeparatedByString: @"\""];
+	NSMutableArray *tempGetCertsResult = [NSMutableArray arrayWithCapacity: 20];
+	for( int i = 0; i <= [rawResult count] - 2; i += 2 )
+	{
+		NSLog( @"i: %d", i + 1 );
+		if( rawResult.count - 1 >= i + 1 )
+		{
+			// Valid object
+			[tempGetCertsResult addObject: [rawResult objectAtIndex: i + 1]];
+		}
+	}
+	
+	certComboBoxItems = [NSMutableArray arrayWithArray: tempGetCertsResult];
+	
+	[certComboBox reloadData];
 }
 
-- (void) checkCerts: (NSTimer *) timer
+- (void) checkCerts: (NSNotification *) notification
 {
-	if( [certTask isRunning] )
-		return;
-
-	[timer invalidate];
+	[self watchGetCerts: notification];
+	[notificationCenter removeObserver: self name: NSFileHandleReadToEndOfFileCompletionNotification object: [notification object]];
 	certTask = nil;
 	
 	if( [certComboBoxItems count] == 0 )

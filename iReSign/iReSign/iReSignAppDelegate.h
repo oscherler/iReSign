@@ -17,6 +17,7 @@
 	
 	NSUserDefaults *defaults;
 	NSFileManager *fileManager;
+	NSNotificationCenter *notificationCenter;
 	
 	NSTask *unzipTask;
 	NSTask *copyTask;
@@ -63,22 +64,49 @@
 @property (nonatomic, strong) NSString *workingPath;
 
 - (IBAction) resign: (id) sender;
+
+- (void) checkUnzip: (NSNotification *) notification;
+- (void) checkCopy: (NSNotification *) notification;
+
+- (BOOL) doBundleIDChange: (NSString *) newBundleID;
+- (BOOL) doITunesMetadataBundleIDChange: (NSString *) newBundleID;
+- (BOOL) doAppBundleIDChange: (NSString *) newBundleID;
+- (BOOL) changeBundleIDForFile: (NSString *) filePath bundleIDKey: (NSString *) bundleIDKey newBundleID: (NSString *) newBundleID plistOutOptions: (NSPropertyListWriteOptions) options;
+
+- (void) doProvisioning;
+- (void) checkProvisioning: (NSNotification *) notification;
+- (void) doEntitlementsFixing;
+- (void) watchEntitlements: (NSNotification *) notification;
+- (void) checkEntitlementsFix: (NSNotification *) notification;
+- (void) doEntitlementsEdit;
+
+- (void) doCodeSigning;
+- (void) signFile: (NSString*) filePath;
+- (void) watchCodesigning: (NSNotification *) notification;
+- (void) checkCodesigning: (NSNotification *) notification;
+
+- (void) doVerifySignature;
+- (void) watchVerificationProcess: (NSNotification *) notification;
+-(void) checkVerificationProcess: (NSNotification *) notification;
+
+- (void) doZip;
+- (void) checkZip: (NSNotification *) notification;
+
 - (IBAction) browse: (id) sender;
 - (IBAction) provisioningBrowse: (id) sender;
 - (IBAction) entitlementBrowse: (id) sender;
 - (IBAction) changeBundleIDPressed: (id) sender;
 
-- (void) checkUnzip: (NSTimer *) timer;
-- (void) checkCopy: (NSTimer *) timer;
-- (void) doProvisioning;
-- (void) checkProvisioning: (NSTimer *) timer;
-- (void) doCodeSigning;
-- (void) checkCodesigning: (NSTimer *) timer;
-- (void) doVerifySignature;
-- (void) checkVerificationProcess: (NSTimer *) timer;
-- (void) doZip;
-- (void) checkZip: (NSTimer *) timer;
 - (void) disableControls;
 - (void) enableControls;
+
+- (NSInteger) numberOfItemsInComboBox: (NSComboBox *) aComboBox;
+- (id) comboBox: (NSComboBox *) aComboBox objectValueForItemAtIndex: (NSInteger) index;
+
+- (void) getCerts;
+- (void) watchGetCerts: (NSNotification *) notification;
+- (void) checkCerts: (NSNotification *) notification;
+
+- (void) showAlertOfKind: (NSAlertStyle) style WithTitle: (NSString *) title AndMessage: (NSString *) message;
 
 @end
