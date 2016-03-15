@@ -96,7 +96,7 @@
 - (void) parseCerts: (NSString *) certData;
 - (void) checkCerts: (NSNotification *) notification;
 
-- (void) showAlertOfKind: (NSAlertStyle) style WithTitle: (NSString *) title AndMessage: (NSString *) message;
+- (void) showAlertOfKind: (NSAlertStyle) style withTitle: (NSString *) title andMessage: (NSString *) message;
 
 - (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onTerminate: (SEL) selector;
 - (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onCompleteReadingOutput: (SEL) selector;

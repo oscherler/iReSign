@@ -43,20 +43,20 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	if( ! [fileManager fileExistsAtPath: @"/usr/bin/zip"] )
 	{
-		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"This app cannot run without the zip utility present at /usr/bin/zip"];
-		exit( 0 );
+		[self abort: @"This app cannot run without the zip utility present at /usr/bin/zip"];
+		[self disableControls];
 	}
 
 	if( ! [fileManager fileExistsAtPath: @"/usr/bin/unzip"] )
 	{
-		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"This app cannot run without the unzip utility present at /usr/bin/unzip"];
-		exit( 0 );
+		[self abort: @"This app cannot run without the unzip utility present at /usr/bin/unzip"];
+		[self disableControls];
 	}
 
 	if( ! [fileManager fileExistsAtPath: @"/usr/bin/codesign"] )
 	{
-		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"This app cannot run without the codesign utility present at /usr/bin/codesign"];
-		exit( 0 );
+		[self abort: @"This app cannot run without the codesign utility present at /usr/bin/codesign"];
+		[self disableControls];
 	}
 }
 
@@ -77,9 +77,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	if( ! [certComboBox objectValue] )
 	{
-		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"You must choose an signing certificate from dropdown."];
-		[self enableControls];
-		[statusLabel setStringValue: @"Please try again"];
+		[self abort: @"You must choose an signing certificate from dropdown."];
 
 		return;
 	}
@@ -88,9 +86,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 	if( ! [sourceExtension isEqualToString: @"ipa"] && ! [sourceExtension isEqualToString: @"xcarchive"] )
 	{
-		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"You must choose an *.ipa or *.xcarchive file"];
-		[self enableControls];
-		[statusLabel setStringValue: @"Please try again"];
+		[self abort: @"You must choose an *.ipa or *.xcarchive file"];
 		
 		return;
 	}
@@ -133,9 +129,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		
 		if( infoPListDict == nil )
 		{
-			[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: [NSString stringWithFormat: @"Retrieve %@ failed", kInfoPlistFilename]];
-			[self enableControls];
-			[statusLabel setStringValue: @"Ready"];
+			[self abort: [NSString stringWithFormat: @"Retrieve %@ failed", kInfoPlistFilename]];
 			
 			return;
 		}
@@ -151,9 +145,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		
 		if( applicationPath == nil )
 		{
-			[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: [NSString stringWithFormat: @"Unable to parse %@", kInfoPlistFilename]];
-			[self enableControls];
-			[statusLabel setStringValue: @"Ready"];
+			[self abort: [NSString stringWithFormat: @"Unable to parse %@", kInfoPlistFilename]];
 			
 			return;
 		}
@@ -176,9 +168,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	if( ! [fileManager fileExistsAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName]] )
 	{
-		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"Unzip failed"];
-		[self enableControls];
-		[statusLabel setStringValue: @"Ready"];
+		[self abort: @"Unzip failed"];
 		
 		return;
 	}
@@ -325,11 +315,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 			appPath = [[workingPath stringByAppendingPathComponent: kPayloadDirName] stringByAppendingPathComponent: file];
 			if( ! [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
 			{
-				[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"Provisioning failed"];
-				[self enableControls];
-				[statusLabel setStringValue: @"Ready"];
+				[self abort: @"Provisioning failed"];
 				
-				continue;
+				return;
 			}
 			
 			BOOL identifierOK = FALSE;
@@ -390,9 +378,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 			}
 			else
 			{
-				[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"Product identifiers don't match"];
-				[self enableControls];
-				[statusLabel setStringValue: @"Ready"];
+				[self abort: @"Product identifiers don't match"];
+				
+				return;
 			}
 
 			break;
@@ -441,9 +429,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	if( ! [xmlData writeToFile: filePath atomically: YES] )
 	{
 		NSLog(@"Error writing entitlements file.");
-		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"Failed entitlements generation"];
-		[self enableControls];
-		[statusLabel setStringValue: @"Ready"];
+		[self abort: @"Failed entitlements generation"];
 		
 		return;
 	}
@@ -606,9 +592,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	else
 	{
 		NSString *error = [[codesigningResult stringByAppendingString: @"\n\n"] stringByAppendingString: verificationResult];
-		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Signing failed" AndMessage: error];
-		[self enableControls];
-		[statusLabel setStringValue: @"Please try again"];
+		[self abort: error];
+		
+		return;
 	}
 }
 
@@ -820,9 +806,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	if( [certComboBoxItems count] == 0 )
 	{
-		[self showAlertOfKind: NSCriticalAlertStyle WithTitle: @"Error" AndMessage: @"Getting Certificate ID's failed"];
-		[self enableControls];
-		[statusLabel setStringValue: @"Ready"];
+		[self abort: @"Getting Certificate ID's failed"];
 		
 		return;
 	}
@@ -936,7 +920,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 /* NSRunAlerts are being deprecated in 10.9 */
 
 // Show a critical alert
-- (void) showAlertOfKind: (NSAlertStyle) style WithTitle: (NSString *) title AndMessage: (NSString *) message
+- (void) showAlertOfKind: (NSAlertStyle) style withTitle: (NSString *) title andMessage: (NSString *) message
 {
 	NSAlert *alert = [[NSAlert alloc] init];
 
@@ -945,6 +929,14 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[alert setInformativeText: message];
 	[alert setAlertStyle: style];
 	[alert runModal];
+}
+
+- (void) abort: (NSString *) message
+{
+	[self showAlertOfKind: NSCriticalAlertStyle withTitle: @"Error" andMessage: message];
+	[self enableControls];
+
+	[statusLabel setStringValue: @"Ready"];
 }
 
 @end
