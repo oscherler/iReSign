@@ -19,13 +19,6 @@
 	NSFileManager *fileManager;
 	NSNotificationCenter *notificationCenter;
 	
-	NSTask *unzipTask;
-	NSTask *copyTask;
-	NSTask *provisioningTask;
-	NSTask *codesignTask;
-	NSTask *generateEntitlementsTask;
-	NSTask *verifyTask;
-	NSTask *zipTask;
 	NSString *sourcePath;
 	NSString *appPath;
 	NSString *frameworksDirPath;
@@ -55,7 +48,6 @@
 	
 	IBOutlet NSComboBox *certComboBox;
 	NSMutableArray *certComboBoxItems;
-	NSTask *certTask;
 	NSArray *getCertsResult;
 }
 

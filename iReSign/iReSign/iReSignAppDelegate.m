@@ -110,7 +110,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		NSLog( @"Unzipping %@", sourcePath );
 		[statusLabel setStringValue: @"Extracting original app"];
 		
-		unzipTask = [[NSTask alloc] init];
+		NSTask *unzipTask = [[NSTask alloc] init];
 		[unzipTask setLaunchPath: @"/usr/bin/unzip"];
 		[unzipTask setArguments: [NSArray arrayWithObjects: @"-q", sourcePath, @"-d", workingPath, nil]];
 		
@@ -166,7 +166,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		NSLog( @"Copying %@ to %@ path in %@", applicationPath, kPayloadDirName, payloadPath );
 		[statusLabel setStringValue: [NSString stringWithFormat: @"Copying .xcarchive app to %@ path", kPayloadDirName]];
 		
-		copyTask = [[NSTask alloc] init];
+		NSTask *copyTask = [[NSTask alloc] init];
 		[copyTask setLaunchPath: @"/bin/cp"];
 		[copyTask setArguments: [NSArray arrayWithObjects: @"-r", applicationPath, payloadPath, nil]];
 		
@@ -179,7 +179,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 - (void) checkUnzip: (NSNotification *) notification
 {
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-	unzipTask = nil;
 	
 	if( ! [fileManager fileExistsAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName]] )
 	{
@@ -211,7 +210,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 - (void) checkCopy: (NSNotification *) notification
 {
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-	copyTask = nil;
 	
 	NSLog(@"Copy done");
 	[statusLabel setStringValue: @".xcarchive app copied"];
@@ -314,7 +312,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	NSString *targetPath = [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"];
 	
-	provisioningTask = [[NSTask alloc] init];
+	NSTask *provisioningTask = [[NSTask alloc] init];
 	[provisioningTask setLaunchPath: @"/bin/cp"];
 	[provisioningTask setArguments: [NSArray arrayWithObjects: [provisioningPathField stringValue], targetPath, nil]];
 	
@@ -326,7 +324,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 - (void) checkProvisioning: (NSNotification *) notification
 {
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-	provisioningTask = nil;
 	
 	NSArray *dirContents = [fileManager contentsOfDirectoryAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName] error: nil];
 	
@@ -426,7 +423,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	if( ! appPath )
 		return;
 
-	generateEntitlementsTask = [[NSTask alloc] init];
+	NSTask *generateEntitlementsTask = [[NSTask alloc] init];
 	[generateEntitlementsTask setLaunchPath: @"/usr/bin/security"];
 	[generateEntitlementsTask setArguments: @[@"cms", @"-D", @"-i", provisioningPathField.stringValue]];
 	[generateEntitlementsTask setCurrentDirectoryPath: workingPath];
@@ -450,7 +447,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 {
 	[self watchEntitlements: notification];
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-	generateEntitlementsTask = nil;
 
 	NSLog(@"Entitlements fixed done");
 	[statusLabel setStringValue: @"Entitlements generated"];
@@ -573,7 +569,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	[arguments addObjectsFromArray: [NSArray arrayWithObjects: filePath, nil]];
 	
-	codesignTask = [[NSTask alloc] init];
+	NSTask *codesignTask = [[NSTask alloc] init];
 	[codesignTask setLaunchPath: @"/usr/bin/codesign"];
 	[codesignTask setArguments: arguments];
 	
@@ -596,7 +592,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 {
 	[self watchCodesigning: notification];
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-	codesignTask = nil;
 
 	if( frameworks.count > 0 )
 	{
@@ -621,7 +616,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	if( ! appPath )
 		return;
 
-	verifyTask = [[NSTask alloc] init];
+	NSTask *verifyTask = [[NSTask alloc] init];
 	[verifyTask setLaunchPath: @"/usr/bin/codesign"];
 	[verifyTask setArguments: [NSArray arrayWithObjects: @"-v", appPath, nil]];
 	
@@ -647,7 +642,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 {
 	[self watchVerificationProcess: notification];
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-	verifyTask = nil;
 
 	if( [verificationResult length] == 0 )
 	{
@@ -686,7 +680,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	NSLog( @"Dest: %@", destinationPath );
 	
-	zipTask = [[NSTask alloc] init];
+	NSTask *zipTask = [[NSTask alloc] init];
 	[zipTask setLaunchPath: @"/usr/bin/zip"];
 	[zipTask setCurrentDirectoryPath: workingPath];
 	[zipTask setArguments: [NSArray arrayWithObjects: @"-qry", destinationPath, @".", nil]];
@@ -702,7 +696,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 - (void) checkZip: (NSNotification *) notification
 {
 	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-	zipTask = nil;
 
 	NSLog(@"Zipping done");
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Saved %@", fileName]];
@@ -837,7 +830,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	NSLog(@"Getting Certificate IDs");
 	[statusLabel setStringValue: @"Getting Signing Certificate IDs"];
 	
-	certTask = [[NSTask alloc] init];
+	NSTask *certTask = [[NSTask alloc] init];
 	[certTask setLaunchPath: @"/usr/bin/security"];
 	[certTask setArguments: [NSArray arrayWithObjects: @"find-identity", @"-v", @"-p", @"codesigning", nil]];
 	
@@ -882,7 +875,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 {
 	[self watchGetCerts: notification];
 	[notificationCenter removeObserver: self name: NSFileHandleReadToEndOfFileCompletionNotification object: [notification object]];
-	certTask = nil;
 	
 	if( [certComboBoxItems count] == 0 )
 	{
