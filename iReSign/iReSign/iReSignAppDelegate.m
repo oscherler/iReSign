@@ -122,7 +122,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[statusLabel setStringValue: @"Extracting original app"];
 	
 	[self executeCommand: @"/usr/bin/unzip"
-		withArgs: [NSArray arrayWithObjects: @"-q", sourcePath, @"-d", workingPath, nil]
+		withArgs: @[ @"-q", sourcePath, @"-d", workingPath ]
 		onTerminate: ^(NSTask *task) {
 			if( ! [fileManager fileExistsAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName]] )
 			{
@@ -183,7 +183,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Copying .xcarchive app to %@ path", kPayloadDirName]];
 
 	[self executeCommand: @"/bin/cp"
-		withArgs: [NSArray arrayWithObjects: @"-r", applicationPath, payloadPath, nil]
+		withArgs: @[ @"-r", applicationPath, payloadPath ]
 		onTerminate: ^(NSTask *task) {
 			NSLog(@"Copy done");
 			[statusLabel setStringValue: @".xcarchive app copied"];
@@ -270,7 +270,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	NSString *targetPath = [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"];
 
 	[self executeCommand: @"/bin/cp"
-		withArgs: [NSArray arrayWithObjects: [provisioningPathField stringValue], targetPath, nil]
+		withArgs: @[ [provisioningPathField stringValue], targetPath ]
 		onTerminate: ^(NSTask *task) {
 			if( ! [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
 			{
@@ -448,7 +448,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		[arguments addObject: [NSString stringWithFormat: @"--entitlements=%@", [entitlementField stringValue]]];
 	}
 	
-	[arguments addObjectsFromArray: [NSArray arrayWithObjects: filePath, nil]];
+	[arguments addObject: filePath];
 	
 	[self executeCommand: @"/usr/bin/codesign"
 		withArgs: arguments
@@ -486,7 +486,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Verifying %@", appName]];
 	
 	[self executeCommand: @"/usr/bin/codesign"
-		withArgs: [NSArray arrayWithObjects: @"-v", appPath, nil]
+		withArgs: @[ @"-v", appPath ]
 		onCompleteReadingOutput: ^(NSString *output) {
 			verificationResult = output;
 
@@ -528,7 +528,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Saving %@", fileName]];
 
 	[self executeCommand: @"/usr/bin/zip"
-		withArgs: [NSArray arrayWithObjects: @"-qry", destinationPath, @".", nil]
+		withArgs: @[ @"-qry", destinationPath, @"." ]
 		onTerminate: ^(NSTask *task) {
 			NSLog(@"Zipping done");
 
@@ -673,7 +673,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[statusLabel setStringValue: @"Getting Signing Certificate IDs"];
 	
 	[self executeCommand: @"/usr/bin/security"
-		withArgs: [NSArray arrayWithObjects: @"find-identity", @"-v", @"-p", @"codesigning", nil]
+		withArgs: @[ @"find-identity", @"-v", @"-p", @"codesigning" ]
 		onCompleteReadingOutput: ^(NSString *output) {
 			[self checkCerts: output];
 		}
