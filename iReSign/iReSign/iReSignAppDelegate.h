@@ -65,7 +65,7 @@
 - (void) changeBundleIDForFile: (NSString *) filePath bundleIDKey: (NSString *) bundleIDKey newBundleID: (NSString *) newBundleID plistOutOptions: (NSPropertyListWriteOptions) options;
 
 - (void) doProvisioning;
-- (void) checkProvisioning;
+- (void) checkProvisioning: (NSString *) embeddedProvisionPath;
 - (void) checkApplicationIdentifiers: (NSDictionary *) embeddedProvisioning;
 - (void) doEntitlementsFixing;
 - (void) doEntitlementsEdit;

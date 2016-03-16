@@ -261,33 +261,33 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) doProvisioning
 {
-	if( [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
+	NSString *embeddedProvisionPath = [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"];
+	
+	if( [fileManager fileExistsAtPath: embeddedProvisionPath] )
 	{
 		NSLog(@"Found embedded.mobileprovision, deleting.");
-		[fileManager removeItemAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"] error: nil];
+		[fileManager removeItemAtPath: embeddedProvisionPath error: nil];
 	}
 	
-	NSString *targetPath = [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"];
-
 	[self executeCommand: @"/bin/cp"
-		withArgs: @[ [provisioningPathField stringValue], targetPath ]
+		withArgs: @[ [provisioningPathField stringValue], embeddedProvisionPath ]
 		onTerminate: ^(NSTask *task) {
-			if( ! [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
+			if( ! [fileManager fileExistsAtPath: embeddedProvisionPath] )
 			{
 				[self abort: @"Provisioning failed"];
 				
 				return;
 			}
 
-			[self checkProvisioning];
+			[self checkProvisioning: embeddedProvisionPath];
 		}
 	];
 }
 
-- (void) checkProvisioning
+- (void) checkProvisioning: (NSString *) embeddedProvisionPath
 {
 	[self executeCommand:@"/usr/bin/security"
-		withArgs: @[ @"cms", @"-D", @"-i", [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"] ]
+		withArgs: @[ @"cms", @"-D", @"-i", embeddedProvisionPath ]
 		onCompleteReadingOutput: ^(NSString *output) {
 			[self checkApplicationIdentifiers: output.propertyList];
 		}
