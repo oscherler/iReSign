@@ -25,10 +25,6 @@
 	NSString *appPath;
 	NSString *appName;
 
-	NSString *frameworksDirPath;
-	NSString *frameworkPath;
-	
-	NSString *entitlementsResult;
 	NSString *codesigningResult;
 	NSString *verificationResult;
 	
@@ -49,7 +45,6 @@
 	
 	IBOutlet NSComboBox *certComboBox;
 	NSMutableArray *certComboBoxItems;
-	NSArray *getCertsResult;
 }
 
 @property (unsafe_unretained) IBOutlet NSWindow *window;

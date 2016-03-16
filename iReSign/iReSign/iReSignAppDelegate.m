@@ -341,22 +341,25 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[self executeCommand:@"/usr/bin/security"
 		withArgs:@[ @"cms", @"-D", @"-i", provisioningPathField.stringValue ]
 		onCompleteReadingOutput: ^(NSString *output) {
-			entitlementsResult = output;
-
 			NSLog(@"Entitlements fixed done");
 			[statusLabel setStringValue: @"Entitlements generated"];
 
-			[self doEntitlementsEdit];
+			NSDictionary *entitlements = output.propertyList;
+
+			[self doEntitlementsEdit: entitlements];
 		}
 	];
 }
 
-- (void) doEntitlementsEdit
+- (void) doEntitlementsEdit: (NSDictionary *) entitlements
 {
-	NSDictionary* entitlements = entitlementsResult.propertyList;
-	entitlements = entitlements[@"Entitlements"];
 	NSString* filePath = [workingPath stringByAppendingPathComponent: @"entitlements.plist"];
-	NSData *xmlData = [NSPropertyListSerialization dataWithPropertyList: entitlements format: NSPropertyListXMLFormat_v1_0 options: kCFPropertyListImmutable error: nil];
+	NSData *xmlData = [NSPropertyListSerialization
+		dataWithPropertyList: entitlements[@"Entitlements"]
+		format: NSPropertyListXMLFormat_v1_0
+		options: kCFPropertyListImmutable
+		error: nil
+	];
 
 	if( ! [xmlData writeToFile: filePath atomically: YES] )
 	{
@@ -372,11 +375,11 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) doCodeSigning
 {
-	frameworksDirPath = nil;
+	NSString *frameworksDirPath = [appPath stringByAppendingPathComponent: kFrameworksDirName];
+
 	hasFrameworks = NO;
 	frameworks = [[NSMutableArray alloc] init];
 	
-	frameworksDirPath = [appPath stringByAppendingPathComponent: kFrameworksDirName];
 	NSLog( @"Found %@", appPath );
 	if( [fileManager fileExistsAtPath: frameworksDirPath] )
 	{
@@ -388,7 +391,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 			NSString *extension = [[frameworkFile pathExtension] lowercaseString];
 			if( [extension isEqualTo: @"framework"] || [extension isEqualTo: @"dylib"] )
 			{
-				frameworkPath = [frameworksDirPath stringByAppendingPathComponent: frameworkFile];
+				NSString *frameworkPath = [frameworksDirPath stringByAppendingPathComponent: frameworkFile];
 				NSLog( @"Found %@", frameworkPath );
 				[frameworks addObject: frameworkPath];
 			}
@@ -505,8 +508,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 			if( [verificationResult length] != 0 )
 			{
-				NSString *error = [[codesigningResult stringByAppendingString: @"\n\n"] stringByAppendingString: verificationResult];
-				[self abort: error];
+				[self abort: [NSString stringWithFormat: @"%@\n\n%@", codesigningResult, verificationResult]];
 				
 				return;
 			}
@@ -671,8 +673,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) getCerts
 {
-	getCertsResult = nil;
-	
 	NSLog(@"Getting Certificate IDs");
 	[statusLabel setStringValue: @"Getting Signing Certificate IDs"];
 	
