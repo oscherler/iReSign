@@ -124,7 +124,17 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[self executeCommand: @"/usr/bin/unzip"
 		withArgs: [NSArray arrayWithObjects: @"-q", sourcePath, @"-d", workingPath, nil]
 		onTerminate: ^(NSTask *task) {
-			[self checkUnzip];
+			if( ! [fileManager fileExistsAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName]] )
+			{
+				[self abort: @"Unzip failed"];
+				
+				return;
+			}
+
+			NSLog(@"Unzipping done");
+			[statusLabel setStringValue: @"Original app extracted"];
+
+			[self processPayload];
 		}
 	];
 }
@@ -175,32 +185,12 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[self executeCommand: @"/bin/cp"
 		withArgs: [NSArray arrayWithObjects: @"-r", applicationPath, payloadPath, nil]
 		onTerminate: ^(NSTask *task) {
-			[self checkCopy];
+			NSLog(@"Copy done");
+			[statusLabel setStringValue: @".xcarchive app copied"];
+			
+			[self processPayload];
 		}
 	];
-}
-
-- (void) checkUnzip
-{
-	if( ! [fileManager fileExistsAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName]] )
-	{
-		[self abort: @"Unzip failed"];
-		
-		return;
-	}
-
-	NSLog(@"Unzipping done");
-	[statusLabel setStringValue: @"Original app extracted"];
-
-	[self processPayload];
-}
-
-- (void) checkCopy
-{
-	NSLog(@"Copy done");
-	[statusLabel setStringValue: @".xcarchive app copied"];
-	
-	[self processPayload];
 }
 
 - (void) processPayload
@@ -374,18 +364,14 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[self executeCommand:@"/usr/bin/security"
 		withArgs:@[ @"cms", @"-D", @"-i", provisioningPathField.stringValue ]
 		onCompleteReadingOutput: ^(NSString *output) {
-			[self checkEntitlementsFix: output];
+			entitlementsResult = output;
+
+			NSLog(@"Entitlements fixed done");
+			[statusLabel setStringValue: @"Entitlements generated"];
+
+			[self doEntitlementsEdit];
 		}
 	];
-}
-
-- (void) checkEntitlementsFix: (NSString *) output
-{
-	entitlementsResult = output;
-
-	NSLog(@"Entitlements fixed done");
-	[statusLabel setStringValue: @"Entitlements generated"];
-	[self doEntitlementsEdit];
 }
 
 - (void) doEntitlementsEdit
@@ -490,15 +476,15 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[self executeCommand: @"/usr/bin/codesign"
 		withArgs: arguments
 		onCompleteReadingOutput: ^(NSString *output) {
-			[self checkCodesigning: output];
+			codesigningResult = output;
+
+			[self continueCodesigning];
 		}
 	];
 }
 
-- (void) checkCodesigning: (NSString *) output
+- (void) continueCodesigning
 {
-	codesigningResult = output;
-
 	if( frameworks.count > 0 )
 	{
 		[self signFile: [frameworks lastObject]];
@@ -525,28 +511,21 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[self executeCommand: @"/usr/bin/codesign"
 		withArgs: [NSArray arrayWithObjects: @"-v", appPath, nil]
 		onCompleteReadingOutput: ^(NSString *output) {
-			[self checkVerificationProcess: output];
+			verificationResult = output;
+
+			if( [verificationResult length] != 0 )
+			{
+				NSString *error = [[codesigningResult stringByAppendingString: @"\n\n"] stringByAppendingString: verificationResult];
+				[self abort: error];
+				
+				return;
+			}
+
+			NSLog(@"Verification done");
+			[statusLabel setStringValue: @"Verification completed"];
+			[self doZip];
 		}
 	];
-}
-
-- (void) checkVerificationProcess: (NSString *) output
-{
-	verificationResult = output;
-
-	if( [verificationResult length] == 0 )
-	{
-		NSLog(@"Verification done");
-		[statusLabel setStringValue: @"Verification completed"];
-		[self doZip];
-	}
-	else
-	{
-		NSString *error = [[codesigningResult stringByAppendingString: @"\n\n"] stringByAppendingString: verificationResult];
-		[self abort: error];
-		
-		return;
-	}
 }
 
 - (void) doZip
@@ -574,14 +553,15 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[self executeCommand: @"/usr/bin/zip"
 		withArgs: [NSArray arrayWithObjects: @"-qry", destinationPath, @".", nil]
 		onTerminate: ^(NSTask *task) {
-			[self checkZip];
+			NSLog(@"Zipping done");
+
+			[self reportSuccess];
 		}
 	];
 }
 
-- (void) checkZip
+- (void) reportSuccess
 {
-	NSLog(@"Zipping done");
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Saved %@", fileName]];
 	
 	[fileManager removeItemAtPath: workingPath error: nil];
@@ -590,6 +570,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	NSString *result = [[codesigningResult stringByAppendingString: @"\n\n"] stringByAppendingString: verificationResult];
 	NSLog( @"Codesigning result: %@", result );
+	NSLog(@"Success.");
 }
 
 - (IBAction) browse: (id) sender

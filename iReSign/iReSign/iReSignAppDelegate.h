@@ -59,9 +59,6 @@
 
 - (IBAction) resign: (id) sender;
 
-- (void) checkUnzip;
-- (void) checkCopy;
-
 - (void) doBundleIDChange: (NSString *) newBundleID;
 - (void) doITunesMetadataBundleIDChange: (NSString *) newBundleID;
 - (void) doAppBundleIDChange: (NSString *) newBundleID;
@@ -70,18 +67,16 @@
 - (void) doProvisioning;
 - (void) checkProvisioning;
 - (void) doEntitlementsFixing;
-- (void) checkEntitlementsFix: (NSString *) output;
 - (void) doEntitlementsEdit;
 
 - (void) doCodeSigning;
 - (void) signFile: (NSString*) filePath;
-- (void) checkCodesigning: (NSString *) output;
+- (void) continueCodesigning;
 
 - (void) doVerifySignature;
--(void) checkVerificationProcess: (NSString *) output;
 
 - (void) doZip;
-- (void) checkZip;
+- (void) reportSuccess;
 
 - (IBAction) browse: (id) sender;
 - (IBAction) provisioningBrowse: (id) sender;
