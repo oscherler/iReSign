@@ -520,39 +520,30 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) doZip
 {
-	NSArray *destinationPathComponents = [sourcePath pathComponents];
-	NSString *destinationPath = @"";
-	
-	for( int i = 0; i < ([destinationPathComponents count] - 1); i++ )
-	{
-		destinationPath = [destinationPath stringByAppendingPathComponent: [destinationPathComponents objectAtIndex: i]];
-	}
-	
-	fileName = [sourcePath lastPathComponent];
-	fileName = [fileName substringToIndex: ([fileName length] - ([[sourcePath pathExtension] length] + 1))];
-	fileName = [fileName stringByAppendingString: @"-resigned"];
-	fileName = [fileName stringByAppendingPathExtension: @"ipa"];
-	
-	destinationPath = [destinationPath stringByAppendingPathComponent: fileName];
-	
+	NSString *destinationPath = [NSString stringWithFormat: @"%@-resigned.%@",
+		[sourcePath stringByDeletingPathExtension],
+		[sourcePath pathExtension]
+	];
+	NSString *resignedFileName = [destinationPath lastPathComponent];
+
 	NSLog( @"Dest: %@", destinationPath );
 	
 	NSLog( @"Zipping %@", destinationPath );
-	[statusLabel setStringValue: [NSString stringWithFormat: @"Saving %@", fileName]];
+	[statusLabel setStringValue: [NSString stringWithFormat: @"Saving %@", resignedFileName]];
 
 	[self executeCommand: @"/usr/bin/zip"
 		withArgs: @[ @"-qry", destinationPath, @"." ]
 		onTerminate: ^(NSTask *task) {
 			NSLog(@"Zipping done");
 
-			[self reportSuccess];
+			[self reportSuccess: resignedFileName];
 		}
 	];
 }
 
-- (void) reportSuccess
+- (void) reportSuccess: (NSString *) resignedFileName
 {
-	[statusLabel setStringValue: [NSString stringWithFormat: @"Saved %@", fileName]];
+	[statusLabel setStringValue: [NSString stringWithFormat: @"Saved %@", resignedFileName]];
 	
 	[fileManager removeItemAtPath: workingPath error: nil];
 	

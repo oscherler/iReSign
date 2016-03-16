@@ -27,7 +27,6 @@
 
 	NSString *frameworksDirPath;
 	NSString *frameworkPath;
-	NSString *fileName;
 	
 	NSString *entitlementsResult;
 	NSString *codesigningResult;
@@ -77,7 +76,7 @@
 - (void) doVerifySignature;
 
 - (void) doZip;
-- (void) reportSuccess;
+- (void) reportSuccess: (NSString *) resignedFileName;
 
 - (IBAction) browse: (id) sender;
 - (IBAction) provisioningBrowse: (id) sender;
