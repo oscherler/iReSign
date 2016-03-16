@@ -416,22 +416,23 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	NSDictionary *systemVersionDictionary = [NSDictionary dictionaryWithContentsOfFile: @"/System/Library/CoreServices/SystemVersion.plist"];
 	NSString * systemVersion = [systemVersionDictionary objectForKey: @"ProductVersion"];
 	NSArray * version = [systemVersion componentsSeparatedByString: @"."];
-	if( [version[0] intValue] < 10 || ( [version[0] intValue] == 10 && ( [version[1] intValue] < 9 || ( [version[1] intValue] == 9 && [version[2] intValue] < 5 ) ) ) )
+	
+	int	v0 = [version[0] intValue];
+	int v1 = [version[1] intValue];
+	int v2 = [version[2] intValue];
+
+	if(
+		v0 > 10 ||
+		( v0 == 10 &&
+			(
+				v1 > 9 ||
+				( v1 == 9 && v2 >= 5 )
+			)
+		)
+	)
 	{
 		/*
-		 Before OSX 10.9, code signing requires a version 1 signature.
-		 The resource envelope is necessary.
-		 To ensure it is added, append the resource flag to the arguments.
-		 */
-		
-		NSString *resourceRulesPath = [[NSBundle mainBundle] pathForResource: @"ResourceRules" ofType: @"plist"];
-		NSString *resourceRulesArgument = [NSString stringWithFormat: @"--resource-rules=%@", resourceRulesPath];
-		[arguments addObject: resourceRulesArgument];
-	}
-	else
-	{
-		/*
-		 For OSX 10.9 and later, code signing requires a version 2 signature.
+		 For OSX 10.9.5 and later, code signing requires a version 2 signature.
 		 The resource envelope is obsolete.
 		 To ensure it is ignored, remove the resource key from the Info.plist file.
 		 */
@@ -441,6 +442,18 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 		[infoDict removeObjectForKey: @"CFBundleResourceSpecification"];
 		[infoDict writeToFile: infoPath atomically: YES];
 		[arguments addObject: @"--no-strict"]; // http: //stackoverflow.com/a/26204757
+	}
+	else
+	{
+		/*
+		 Before OSX 10.9.5, code signing requires a version 1 signature.
+		 The resource envelope is necessary.
+		 To ensure it is added, append the resource flag to the arguments.
+		 */
+		
+		NSString *resourceRulesPath = [[NSBundle mainBundle] pathForResource: @"ResourceRules" ofType: @"plist"];
+		NSString *resourceRulesArgument = [NSString stringWithFormat: @"--resource-rules=%@", resourceRulesPath];
+		[arguments addObject: resourceRulesArgument];
 	}
 	
 	if( ! [[entitlementField stringValue] isEqualToString: @""] )
