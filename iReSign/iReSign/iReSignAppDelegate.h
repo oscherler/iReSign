@@ -66,6 +66,7 @@
 
 - (void) doProvisioning;
 - (void) checkProvisioning;
+- (void) checkApplicationIdentifiers: (NSDictionary *) embeddedProvisioning;
 - (void) doEntitlementsFixing;
 - (void) doEntitlementsEdit;
 

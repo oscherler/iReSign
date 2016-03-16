@@ -272,6 +272,13 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[self executeCommand: @"/bin/cp"
 		withArgs: [NSArray arrayWithObjects: [provisioningPathField stringValue], targetPath, nil]
 		onTerminate: ^(NSTask *task) {
+			if( ! [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
+			{
+				[self abort: @"Provisioning failed"];
+				
+				return;
+			}
+
 			[self checkProvisioning];
 		}
 	];
@@ -279,74 +286,44 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 - (void) checkProvisioning
 {
-	if( ! [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
-	{
-		[self abort: @"Provisioning failed"];
-		
-		return;
-	}
-	
-	BOOL identifierOK = FALSE;
-	NSString *identifierInProvisioning = @"";
-	
-	NSString *embeddedProvisioning = [NSString stringWithContentsOfFile: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"] encoding: NSASCIIStringEncoding error: nil];
-	NSArray* embeddedProvisioningLines = [embeddedProvisioning componentsSeparatedByCharactersInSet: 
-		[NSCharacterSet newlineCharacterSet]
-	];
-	
-	for( int i = 0; i < [embeddedProvisioningLines count]; i++ )
-	{
-		if( [[embeddedProvisioningLines objectAtIndex: i] rangeOfString: @"application-identifier"].location != NSNotFound )
-		{
-			NSInteger fromPosition = [[embeddedProvisioningLines objectAtIndex: i + 1] rangeOfString: @"<string>"].location + 8;
-			
-			NSInteger toPosition = [[embeddedProvisioningLines objectAtIndex: i + 1] rangeOfString: @"</string>"].location;
-			
-			NSRange range;
-			range.location = fromPosition;
-			range.length = toPosition - fromPosition;
-			
-			NSString *fullIdentifier = [[embeddedProvisioningLines objectAtIndex: i + 1] substringWithRange: range];
-			
-			NSArray *identifierComponents = [fullIdentifier componentsSeparatedByString: @"."];
-			
-			if( [[identifierComponents lastObject] isEqualTo: @"*"] )
-			{
-				identifierOK = TRUE;
-			}
-			
-			for( int i = 1; i < [identifierComponents count]; i++ )
-			{
-				identifierInProvisioning = [identifierInProvisioning stringByAppendingString: [identifierComponents objectAtIndex: i]];
-				if( i < [identifierComponents count] - 1 )
-				{
-					identifierInProvisioning = [identifierInProvisioning stringByAppendingString: @"."];
-				}
-			}
-			break;
+	[self executeCommand:@"/usr/bin/security"
+		withArgs: @[ @"cms", @"-D", @"-i", [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"] ]
+		onCompleteReadingOutput: ^(NSString *output) {
+			[self checkApplicationIdentifiers: output.propertyList];
 		}
-	}
-	
+	];
+}
+
+- (void) checkApplicationIdentifiers: (NSDictionary *) embeddedProvisioning
+{
+	NSString *fullIdentifier = [embeddedProvisioning valueForKeyPath: @"Entitlements.application-identifier"];
+	NSArray *identifierComponents = [fullIdentifier componentsSeparatedByString: @"."];
+
+	NSRange last;
+	last.location = 1;
+	last.length = [identifierComponents count] - 1;
+
+	NSArray *lastComponents = [identifierComponents subarrayWithRange: last];
+	NSString *identifierInProvisioning = [lastComponents componentsJoinedByString: @"."];
+
 	NSLog( @"Mobileprovision identifier: %@", identifierInProvisioning );
-	
+
 	NSDictionary *infoplist = [NSDictionary dictionaryWithContentsOfFile: [appPath stringByAppendingPathComponent: @"Info.plist"]];
-	if( [identifierInProvisioning isEqualTo: [infoplist objectForKey: kKeyBundleIDPlistApp]] )
-	{
-		NSLog(@"Identifiers match");
-		identifierOK = TRUE;
-	}
-	
-	if( identifierOK )
+	NSString *identifierInInfoPlist = [infoplist objectForKey: kKeyBundleIDPlistApp];
+
+	if(
+		[identifierInProvisioning isEqualToString: @"*"] ||
+		[identifierInProvisioning isEqualToString: identifierInInfoPlist]
+	)
 	{
 		NSLog(@"Provisioning completed.");
 		[statusLabel setStringValue: @"Provisioning completed"];
+
 		[self doEntitlementsFixing];
 	}
 	else
 	{
 		[self abort: @"Product identifiers don't match"];
-		
-		return;
 	}
 }
 
