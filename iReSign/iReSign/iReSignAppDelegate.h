@@ -59,8 +59,8 @@
 
 - (IBAction) resign: (id) sender;
 
-- (void) checkUnzip: (NSNotification *) notification;
-- (void) checkCopy: (NSNotification *) notification;
+- (void) checkUnzip;
+- (void) checkCopy;
 
 - (void) doBundleIDChange: (NSString *) newBundleID;
 - (void) doITunesMetadataBundleIDChange: (NSString *) newBundleID;
@@ -68,20 +68,20 @@
 - (void) changeBundleIDForFile: (NSString *) filePath bundleIDKey: (NSString *) bundleIDKey newBundleID: (NSString *) newBundleID plistOutOptions: (NSPropertyListWriteOptions) options;
 
 - (void) doProvisioning;
-- (void) checkProvisioning: (NSNotification *) notification;
+- (void) checkProvisioning;
 - (void) doEntitlementsFixing;
-- (void) checkEntitlementsFix: (NSNotification *) notification;
+- (void) checkEntitlementsFix: (NSString *) output;
 - (void) doEntitlementsEdit;
 
 - (void) doCodeSigning;
 - (void) signFile: (NSString*) filePath;
-- (void) checkCodesigning: (NSNotification *) notification;
+- (void) checkCodesigning: (NSString *) output;
 
 - (void) doVerifySignature;
--(void) checkVerificationProcess: (NSNotification *) notification;
+-(void) checkVerificationProcess: (NSString *) output;
 
 - (void) doZip;
-- (void) checkZip: (NSNotification *) notification;
+- (void) checkZip;
 
 - (IBAction) browse: (id) sender;
 - (IBAction) provisioningBrowse: (id) sender;
@@ -96,11 +96,11 @@
 
 - (void) getCerts;
 - (void) parseCerts: (NSString *) certData;
-- (void) checkCerts: (NSNotification *) notification;
+- (void) checkCerts: (NSString *) output;
 
 - (void) showAlertOfKind: (NSAlertStyle) style withTitle: (NSString *) title andMessage: (NSString *) message;
 
-- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onTerminate: (SEL) selector;
-- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onCompleteReadingOutput: (SEL) selector;
+- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onTerminate: (void (^)(NSTask *)) completion;
+- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onCompleteReadingOutput: (void (^)(NSString *)) output;
 
 @end

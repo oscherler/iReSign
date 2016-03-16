@@ -123,7 +123,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	[self executeCommand: @"/usr/bin/unzip"
 		withArgs: [NSArray arrayWithObjects: @"-q", sourcePath, @"-d", workingPath, nil]
-		onTerminate: @selector( checkUnzip: )
+		onTerminate: ^(NSTask *task) {
+			[self checkUnzip];
+		}
 	];
 }
 
@@ -172,14 +174,14 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 	[self executeCommand: @"/bin/cp"
 		withArgs: [NSArray arrayWithObjects: @"-r", applicationPath, payloadPath, nil]
-		onTerminate: @selector( checkCopy: )
+		onTerminate: ^(NSTask *task) {
+			[self checkCopy];
+		}
 	];
 }
 
-- (void) checkUnzip: (NSNotification *) notification
+- (void) checkUnzip
 {
-	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-	
 	if( ! [fileManager fileExistsAtPath: [workingPath stringByAppendingPathComponent: kPayloadDirName]] )
 	{
 		[self abort: @"Unzip failed"];
@@ -193,10 +195,8 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[self processPayload];
 }
 
-- (void) checkCopy: (NSNotification *) notification
+- (void) checkCopy
 {
-	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-	
 	NSLog(@"Copy done");
 	[statusLabel setStringValue: @".xcarchive app copied"];
 	
@@ -281,14 +281,14 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 	[self executeCommand: @"/bin/cp"
 		withArgs: [NSArray arrayWithObjects: [provisioningPathField stringValue], targetPath, nil]
-		onTerminate: @selector( checkProvisioning: )
+		onTerminate: ^(NSTask *task) {
+			[self checkProvisioning];
+		}
 	];
 }
 
-- (void) checkProvisioning: (NSNotification *) notification
+- (void) checkProvisioning
 {
-	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-	
 	if( ! [fileManager fileExistsAtPath: [appPath stringByAppendingPathComponent: @"embedded.mobileprovision"]] )
 	{
 		[self abort: @"Provisioning failed"];
@@ -373,15 +373,15 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 	[self executeCommand:@"/usr/bin/security"
 		withArgs:@[ @"cms", @"-D", @"-i", provisioningPathField.stringValue ]
-		onCompleteReadingOutput: @selector( checkEntitlementsFix: )
+		onCompleteReadingOutput: ^(NSString *output) {
+			[self checkEntitlementsFix: output];
+		}
 	];
 }
 
-- (void) checkEntitlementsFix: (NSNotification *) notification
+- (void) checkEntitlementsFix: (NSString *) output
 {
-	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-
-	entitlementsResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
+	entitlementsResult = output;
 
 	NSLog(@"Entitlements fixed done");
 	[statusLabel setStringValue: @"Entitlements generated"];
@@ -489,15 +489,15 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	[self executeCommand: @"/usr/bin/codesign"
 		withArgs: arguments
-		onCompleteReadingOutput: @selector( checkCodesigning: )
+		onCompleteReadingOutput: ^(NSString *output) {
+			[self checkCodesigning: output];
+		}
 	];
 }
 
-- (void) checkCodesigning: (NSNotification *) notification
+- (void) checkCodesigning: (NSString *) output
 {
-	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-
-	codesigningResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
+	codesigningResult = output;
 
 	if( frameworks.count > 0 )
 	{
@@ -524,15 +524,15 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	[self executeCommand: @"/usr/bin/codesign"
 		withArgs: [NSArray arrayWithObjects: @"-v", appPath, nil]
-		onCompleteReadingOutput: @selector( checkVerificationProcess: )
+		onCompleteReadingOutput: ^(NSString *output) {
+			[self checkVerificationProcess: output];
+		}
 	];
 }
 
-- (void) checkVerificationProcess: (NSNotification *) notification
+- (void) checkVerificationProcess: (NSString *) output
 {
-	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-
-	verificationResult = [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding];
+	verificationResult = output;
 
 	if( [verificationResult length] == 0 )
 	{
@@ -573,14 +573,14 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 	[self executeCommand: @"/usr/bin/zip"
 		withArgs: [NSArray arrayWithObjects: @"-qry", destinationPath, @".", nil]
-		onTerminate: @selector( checkZip: )
+		onTerminate: ^(NSTask *task) {
+			[self checkZip];
+		}
 	];
 }
 
-- (void) checkZip: (NSNotification *) notification
+- (void) checkZip
 {
-	[notificationCenter removeObserver: self name: NSTaskDidTerminateNotification object: [notification object]];
-
 	NSLog(@"Zipping done");
 	[statusLabel setStringValue: [NSString stringWithFormat: @"Saved %@", fileName]];
 	
@@ -716,7 +716,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	
 	[self executeCommand: @"/usr/bin/security"
 		withArgs: [NSArray arrayWithObjects: @"find-identity", @"-v", @"-p", @"codesigning", nil]
-		onCompleteReadingOutput: @selector( checkCerts: )
+		onCompleteReadingOutput: ^(NSString *output) {
+			[self checkCerts: output];
+		}
 	];
 }
 
@@ -746,11 +748,9 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	[certComboBox reloadData];
 }
 
-- (void) checkCerts: (NSNotification *) notification
+- (void) checkCerts: (NSString *) output
 {
-	[notificationCenter removeObserver: self name: NSFileHandleReadToEndOfFileCompletionNotification object: [notification object]];
-
-	[self parseCerts: [[NSString alloc] initWithData: [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem] encoding: NSASCIIStringEncoding]];
+	[self parseCerts: output];
 	
 	if( [certComboBoxItems count] == 0 )
 	{
@@ -836,22 +836,24 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	return YES;
 }
 
-- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onTerminate: (SEL) selector
+- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onTerminate: (void (^)(NSTask *)) completion
 {
 	NSTask *task = [[NSTask alloc] init];
 	[task setLaunchPath: executablePath];
 	[task setArguments: args];
-		
-	[notificationCenter addObserver: self
-		selector: selector
-		name: NSTaskDidTerminateNotification
+
+	[notificationCenter addObserverForName: NSTaskDidTerminateNotification
 		object: task
+		queue: nil
+		usingBlock: ^( NSNotification *notification ) {
+			completion( [notification object] );
+		}
 	];
-		
+	
 	[task launch];
 }
 
-- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onCompleteReadingOutput: (SEL) selector
+- (void) executeCommand: (NSString *) executablePath withArgs: (NSArray *) args onCompleteReadingOutput: (void (^)(NSString *)) completion
 {
 	NSTask *task = [[NSTask alloc] init];
 	[task setLaunchPath: executablePath];
@@ -860,14 +862,23 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 	NSPipe *pipe = [NSPipe pipe];
 	[task setStandardOutput: pipe];
 	[task setStandardError: pipe];
+	
+	NSFileHandle *handle = [pipe fileHandleForReading];
 
-	[notificationCenter addObserver: self
-		selector: selector
-		name: NSFileHandleReadToEndOfFileCompletionNotification
-		object: [pipe fileHandleForReading]
+	[notificationCenter addObserverForName: NSFileHandleReadToEndOfFileCompletionNotification
+		object: handle
+		queue: nil
+		usingBlock: ^( NSNotification *notification ) {
+			NSString *output = [[NSString alloc]
+				initWithData: [[notification userInfo] objectForKey: NSFileHandleNotificationDataItem]
+				encoding: NSASCIIStringEncoding
+			];
+
+			completion( output );
+		}
 	];
 
-    [[pipe fileHandleForReading] readToEndOfFileInBackgroundAndNotify];
+    [handle readToEndOfFileInBackgroundAndNotify];
 
 	[task launch];
 }
