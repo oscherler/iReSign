@@ -251,7 +251,7 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 
 	NSMutableDictionary *plist = nil;
 	
-	plist = [[NSMutableDictionary alloc] initWithContentsOfFile: filePath];
+	plist = [NSMutableDictionary dictionaryWithContentsOfFile: filePath];
 	[plist setObject: newBundleID forKey: bundleIDKey];
 	
 	NSData *xmlData = [NSPropertyListSerialization dataWithPropertyList: plist format: options options: kCFPropertyListImmutable error: nil];
@@ -868,8 +868,6 @@ static NSString *kiTunesMetadataFileName = @"iTunesMetadata";
 }
 
 #pragma mark - Alert Methods
-
-/* NSRunAlerts are being deprecated in 10.9 */
 
 // Show a critical alert
 - (void) showAlertOfKind: (NSAlertStyle) style withTitle: (NSString *) title andMessage: (NSString *) message
